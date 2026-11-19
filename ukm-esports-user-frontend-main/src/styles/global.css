@@ -5704,3 +5704,20 @@ a { color: inherit; text-decoration: none; }
     width: min(calc(100% - 48px), clamp(760px, calc(1300px - 40vw), 860px));
   }
 }
+
+/* Registration success: wrap long study program / cohort on mobile. */
+@media (max-width: 700px) {
+  .user-success-details > div:nth-child(2) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+    align-items: start;
+  }
+  .user-success-details > div:nth-child(2) dd {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    min-width: 0;
+    max-width: 100%;
+    text-align: right;
+    font-size: 13px;
+  }
+}

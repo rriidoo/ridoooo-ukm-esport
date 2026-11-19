@@ -2,6 +2,7 @@ import AdminSidebarProfile from '../components/AdminSidebarProfile';
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import PrivateDocumentPreview from '../components/PrivateDocumentPreview';
+import AdminConfirmDialog from '../components/AdminConfirmDialog';
 import {
   ArrowLeft,
   Check,
@@ -32,15 +33,16 @@ export default function DetailPendaftar({ adminUser, applicant, onBack, onLogout
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [reviewNote, setReviewNote] = useState(applicant?.review_note || '');
+  const [pendingDecision, setPendingDecision] = useState(null);
   const review = async (decision) => {
-    if (!data.id || data.status !== 'Menunggu Verifikasi') return;
-    if (!window.confirm(decision === 'accepted' ? 'Terima pendaftar ini?' : 'Tolak pendaftar ini?')) return;
+    if (!data.id || data.status !== 'Menunggu Verifikasi' || busy) return;
     setBusy(true); setError('');
     const { error: reviewError } = await supabase.rpc('ridoooo_review_application', {
       p_application_id: data.id, p_decision: decision, p_note: reviewNote || null
     });
     setBusy(false);
-    if (reviewError) { setError(reviewError.message); return; }
+    if (reviewError) { setPendingDecision(null); setError(reviewError.message); return; }
+    setPendingDecision(null);
     await onReviewed?.();
     onBack?.();
   };
@@ -252,12 +254,25 @@ export default function DetailPendaftar({ adminUser, applicant, onBack, onLogout
               </strong>
             </div>
             <div className="detail-pendaftar-review__actions">
-              <button type="button" className="detail-pendaftar-reject" disabled={busy || data.status !== 'Menunggu Verifikasi'} onClick={() => review('rejected')}>Tolak Pendaftar</button>
-              <button type="button" className="detail-pendaftar-accept" disabled={busy || data.status !== 'Menunggu Verifikasi'} onClick={() => review('accepted')}>{busy ? 'Memproses...' : 'Terima Pendaftar'}</button>
+              <button type="button" className="detail-pendaftar-reject" disabled={busy || data.status !== 'Menunggu Verifikasi'} onClick={() => setPendingDecision('rejected')}>Tolak Pendaftar</button>
+              <button type="button" className="detail-pendaftar-accept" disabled={busy || data.status !== 'Menunggu Verifikasi'} onClick={() => setPendingDecision('accepted')}>{busy ? 'Memproses...' : 'Terima Pendaftar'}</button>
             </div>
           </section>
         </div>
       </section>
+      <AdminConfirmDialog
+        open={Boolean(pendingDecision)}
+        tone={pendingDecision === 'accepted' ? 'success' : 'danger'}
+        title={pendingDecision === 'accepted' ? 'Konfirmasi Penerimaan' : 'Konfirmasi Penolakan'}
+        description={pendingDecision === 'accepted'
+          ? 'Yakin ingin menerima mahasiswa ini sebagai anggota UKM Esport Universitas Telkom Purwokerto?'
+          : 'Yakin ingin menolak pendaftaran mahasiswa ini? Keputusan akan terlihat pada akun mahasiswa.'}
+        detail={<><strong>{data.name}</strong><span>NIM: {data.nim || '-'} · Divisi: {data.game}</span></>}
+        confirmLabel={pendingDecision === 'accepted' ? 'Ya, Terima Anggota' : 'Ya, Tolak Pendaftaran'}
+        busy={busy}
+        onCancel={() => setPendingDecision(null)}
+        onConfirm={() => review(pendingDecision)}
+      />
     </main>
   );
 }

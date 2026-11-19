@@ -2,6 +2,7 @@ import AdminSidebarProfile from '../components/AdminSidebarProfile';
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import PrivateDocumentPreview from '../components/PrivateDocumentPreview';
+import AdminConfirmDialog from '../components/AdminConfirmDialog';
 import {
   ArrowLeft,
   Download,
@@ -33,6 +34,7 @@ export default function DetailAnggota({ adminUser, member, onBack, onLogout, onN
   const data = member;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
   async function viewDocument(path, download = false) {
     if (!path) { setError('Dokumen tidak tersedia.'); return; }
@@ -48,14 +50,15 @@ export default function DetailAnggota({ adminUser, member, onBack, onLogout, onN
   }
 
   async function removeMembership() {
-    if (!window.confirm('Hapus keanggotaan ' + data.name + ' dari divisi ' + data.game + '?\n\nRiwayat dan akun mahasiswa tetap tersimpan. Mahasiswa boleh mendaftar ulang ke divisi ini setelah dihapus.')) return;
+    if (!data?.id || busy) return;
     setBusy(true); setError('');
     const { error: rpcError } = await supabase.rpc('ridoooo_remove_member', {
       p_application_id: data.id,
       p_reason: null
     });
     setBusy(false);
-    if (rpcError) { setError(rpcError.message); return; }
+    if (rpcError) { setShowRemoveConfirm(false); setError(rpcError.message); return; }
+    setShowRemoveConfirm(false);
     await onRemoved?.();
     onBack?.();
   }
@@ -246,10 +249,21 @@ export default function DetailAnggota({ adminUser, member, onBack, onLogout, onN
           <section className="detail-anggota-actions">
             {error && <p role="alert" style={{ color: '#ff7777', marginBottom: 12 }}>{error}</p>}
             <button type="button" className="detail-anggota-delete" disabled={busy}
-              onClick={removeMembership}>{busy ? 'Memproses...' : 'Hapus Anggota'}</button>
+              onClick={() => setShowRemoveConfirm(true)}>{busy ? 'Memproses...' : 'Hapus Anggota'}</button>
           </section>
         </div>
       </section>
+      <AdminConfirmDialog
+        open={showRemoveConfirm}
+        tone="danger"
+        title="Konfirmasi Hapus Anggota"
+        description="Yakin ingin menghapus keanggotaan mahasiswa ini dari divisi? Tindakan ini akan mengubah status keanggotaan."
+        detail={<><strong>{data.name}</strong><span>Divisi: {data.game}</span><small>Riwayat pendaftaran dan akun mahasiswa tetap tersimpan. Mahasiswa dapat mendaftar ulang ke divisi ini.</small></>}
+        confirmLabel="Ya, Hapus Anggota"
+        busy={busy}
+        onCancel={() => setShowRemoveConfirm(false)}
+        onConfirm={removeMembership}
+      />
     </main>
   );
 }
