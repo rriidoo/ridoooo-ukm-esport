@@ -8975,3 +8975,8 @@ button {
   .detail-pendaftar-note textarea,
   .detail-pendaftar-note textarea:disabled { min-height: 68px; }
 }
+
+/* Separate the Documents panel from the Decision Note panel. */
+.detail-pendaftar-note {
+  margin-top: 24px;
+}
