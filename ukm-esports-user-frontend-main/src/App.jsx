@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
-import { validateDocumentFile } from './lib/documentValidation';
+import { validateDocumentFile, prepareDocumentFile } from './lib/documentValidation';
 import { DEFAULT_GAME_DIVISIONS, fetchGameDivisions, homeVisibleDivisions } from './lib/gameDivisions';
 import { fetchPublicEvents, formatEventDate } from './lib/events';
 import { DEFAULT_HERO, DEFAULT_STATS, DEFAULT_ADVANTAGES, DEFAULT_HOME_GAMES, fetchHomeContent } from './lib/homeContent';
@@ -527,7 +527,7 @@ function PersonalInfoPage({ authUser, onDraft, preferredDivision, divisions, cat
 
 
 function RegistrationDocumentUpload({
-  id, title, account, accept, formats, selected, onChoose, onClear, disabled
+  id, title, account, accept, formats, selected, onChoose, onClear, disabled, fieldError
 }) {
   const [dragging, setDragging] = useState(false);
   const fileType = selected?.file?.type === 'application/pdf'
@@ -592,6 +592,7 @@ function RegistrationDocumentUpload({
           </div>
         )}
       </div>
+      {fieldError && <p className="user-upload-field-error" role="alert">{fieldError}</p>}
     </section>
   );
 }
@@ -600,17 +601,23 @@ function UploadDocumentsPage({ authUser, draft, onSubmitted }) {
   const [ktmFile, setKtmFile] = useState(null);
   const [followFile, setFollowFile] = useState(null);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [busy, setBusy] = useState(false);
 
   const pickFile = (setter, isInstagram = false) => async (file) => {
     if (!file) return;
-    const validationError = await validateDocumentFile(file, { isInstagram });
-    if (validationError) {
-      setError(validationError);
+    const field = isInstagram ? 'instagram' : 'ktm';
+    const prepared = await prepareDocumentFile(file, { isInstagram });
+    if (prepared.error) {
+      setter(null);
+      setFieldErrors((current) => ({ ...current, [field]: prepared.error }));
+      setError('');
       return;
     }
+    setFieldErrors((current) => ({ ...current, [field]: '' }));
     setError('');
-    setter({ file, name: file.name, size: (file.size / 1048576).toFixed(2) + ' MB' });
+    setter({ file: prepared.file, name: file.name || prepared.file.name,
+      size: (prepared.file.size / 1048576).toFixed(2) + ' MB' });
   };
 
   const submitApplication = async () => {
@@ -703,7 +710,8 @@ function UploadDocumentsPage({ authUser, draft, onSubmitted }) {
           formats="JPG, PNG, PDF"
           selected={ktmFile}
           onChoose={pickFile(setKtmFile)}
-          onClear={() => { setKtmFile(null); setError(''); }}
+          onClear={() => { setKtmFile(null); setError(''); setFieldErrors((current) => ({ ...current, ktm: '' })); }}
+          fieldError={fieldErrors.ktm}
           disabled={busy}
         />
         <RegistrationDocumentUpload
@@ -714,7 +722,8 @@ function UploadDocumentsPage({ authUser, draft, onSubmitted }) {
           formats="JPG, PNG"
           selected={followFile}
           onChoose={pickFile(setFollowFile, true)}
-          onClear={() => { setFollowFile(null); setError(''); }}
+          onClear={() => { setFollowFile(null); setError(''); setFieldErrors((current) => ({ ...current, instagram: '' })); }}
+          fieldError={fieldErrors.instagram}
           disabled={busy}
         />
 

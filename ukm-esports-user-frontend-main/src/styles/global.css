@@ -3473,6 +3473,7 @@ a { color: inherit; text-decoration: none; }
   background:#101a2d;
 }
 .user-upload-card + .user-upload-card { margin-top:26px; }
+.user-upload-field-error { margin:12px 0 0; padding:10px 12px; border-radius:10px; background:rgba(242,31,59,.12); color:#ff9fac; font-size:13px; line-height:1.5; overflow-wrap:anywhere; }
 .user-upload-card-head { display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px; }
 .user-upload-card-head h2 { margin:0;font-size:18px;line-height:1.35;font-weight:800; }
 .user-upload-card-head h2 small { margin-left:12px;color:#8b98ae;font-size:13px;font-weight:500; }
