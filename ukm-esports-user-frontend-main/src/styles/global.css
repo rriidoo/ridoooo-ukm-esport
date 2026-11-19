@@ -5721,3 +5721,25 @@ a { color: inherit; text-decoration: none; }
     font-size: 13px;
   }
 }
+/* Registration inputs: prevent browser autofill from replacing dark theme with white. */
+.user-personal-input input {
+  background-color: transparent;
+  color: #eef3ff;
+  -webkit-text-fill-color: #eef3ff;
+  caret-color: #eef3ff;
+  color-scheme: dark;
+}
+.user-personal-input input:-webkit-autofill,
+.user-personal-input input:-webkit-autofill:hover,
+.user-personal-input input:-webkit-autofill:focus,
+.user-personal-input input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #0a1323 inset;
+  box-shadow: 0 0 0 1000px #0a1323 inset;
+  -webkit-text-fill-color: #eef3ff;
+  caret-color: #eef3ff;
+  border-radius: 0;
+}
+.user-personal-input input:autofill {
+  -webkit-text-fill-color: #eef3ff;
+  box-shadow: 0 0 0 1000px #0a1323 inset;
+}
