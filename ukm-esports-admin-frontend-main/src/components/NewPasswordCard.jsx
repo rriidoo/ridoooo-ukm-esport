@@ -9,24 +9,36 @@ export default function NewPasswordCard({ onBack, onUpdated }) {
   const [confirmation, setConfirmation] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
   const isLongEnough = password.length >= 8;
+  const meetsComplexity = isLongEnough && /[a-zA-Z]/.test(password) && /[0-9]/.test(password);
   const matches = password.length > 0 && password === confirmation;
-  const canSubmit = isLongEnough && matches;
+  const canSubmit = meetsComplexity && matches;
 
   const helperText = useMemo(() => {
+    if (password && !meetsComplexity) return 'Minimal 8 karakter, mengandung huruf dan angka';
     if (!confirmation) return 'Pastikan kedua kata sandi sama persis';
     return matches ? 'Kedua kata sandi sudah sama' : 'Kata sandi belum sama';
-  }, [confirmation, matches]);
+  }, [password, confirmation, matches, meetsComplexity]);
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    if (!canSubmit) return;
-    onUpdated?.(password);
+    if (!canSubmit || busy) return;
+    setError('');
+    setBusy(true);
+    try {
+      await onUpdated?.(password);
+    } catch (err) {
+      setError(err.message || 'Gagal memperbarui kata sandi. Silakan coba lagi.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
-    <section className="new-password-card" aria-labelledby="new-password-title">
+    <section className={error ? 'new-password-card new-password-card--error' : 'new-password-card'} aria-labelledby="new-password-title">
       <div className="new-password-card__heading">
         <h2 id="new-password-title">Buat Sandi Baru</h2>
       </div>
@@ -86,13 +98,14 @@ export default function NewPasswordCard({ onBack, onUpdated }) {
           </div>
         </div>
 
-        <button className="new-password-submit" type="submit" disabled={!canSubmit}>
-          Perbarui Kata Sandi
+        {error && <p role="alert" style={{ color: '#ff7777', marginBottom: 12 }}>{error}</p>}
+        <button className="new-password-submit" type="submit" disabled={!canSubmit || busy}>
+          {busy ? 'Menyimpan...' : 'Perbarui Kata Sandi'}
         </button>
       </form>
 
       <div className="new-password-footer-action">
-        <button type="button" className="new-password-back" onClick={onBack}>
+        <button type="button" className="new-password-back" onClick={onBack} disabled={busy}>
           <img src={backIcon} alt="" aria-hidden="true" />
           <span>Kembali ke Login Admin</span>
         </button>

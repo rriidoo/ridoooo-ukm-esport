@@ -1,9 +1,8 @@
+import AdminSidebarProfile from '../components/AdminSidebarProfile';
 import {
-  Bell,
   ClipboardCheck,
   FileText,
-  Grid2X2,
-  LogOut,
+  RefreshCw,
   Table2,
   UserRoundPlus,
   Users,
@@ -12,9 +11,25 @@ import logo from '../assets/logo-figma.png';
 import dashboardIcon from '../assets/ui-icons/Icon.png';
 import pendaftarIcon from '../assets/ui-icons/Icon-3.png';
 import anggotaIcon from '../assets/ui-icons/Icon-7.png';
-import { applicants } from './Pendaftar';
 
-export default function Beranda({ onLogout, onNavigate, onDetail }) {
+
+export default function Beranda({
+  adminUser, onLogout, onNavigate, onDetail,
+  applicants = [], loading = false, loadError = '', refreshedAt = null, onRefresh,
+}) {
+  const pendingCount = applicants.filter((item) => item.statusCode === 'pending').length;
+  const newStudentsCount = new Set(applicants
+    .filter((item) => new Date(item.created_at).getTime() >= Date.now() - 7 * 86400000)
+    .map((item) => item.user_id)).size;
+  const activeMembersCount = new Set(applicants
+    .filter((item) => item.statusCode === 'accepted')
+    .map((item) => item.user_id)).size;
+  const dataReady = Boolean(refreshedAt);
+  const updatedLabel = refreshedAt
+    ? new Date(refreshedAt).toLocaleString('id-ID', {
+      timeZone: 'Asia/Jakarta', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+    })
+    : null;
   return (
     <main className="beranda-page">
       <aside className="beranda-sidebar">
@@ -49,18 +64,7 @@ export default function Beranda({ onLogout, onNavigate, onDetail }) {
           </button>
         </nav>
 
-        <div className="beranda-sidebar__bottom">
-          <div className="beranda-admin">
-            <div className="beranda-admin__avatar">RP</div>
-            <div className="beranda-admin__copy">
-              <strong>Raka Pratan</strong>
-              <span>SUPER ADMIN</span>
-            </div>
-            <button type="button" className="beranda-admin__logout" onClick={onLogout} aria-label="Logout">
-              <LogOut size={15} strokeWidth={1.8} />
-            </button>
-          </div>
-        </div>
+        <AdminSidebarProfile adminUser={adminUser} onLogout={onLogout} />
       </aside>
 
       <section className="beranda-main">
@@ -70,27 +74,29 @@ export default function Beranda({ onLogout, onNavigate, onDetail }) {
           <div className="beranda-header__actions">
             <div className="beranda-period">
               <span className="beranda-period__dot" />
-              <span>Periode Aktif: Registrasi 2024/2025</span>
+              <span>Data Pendaftaran Terkini</span>
             </div>
-            <button type="button" className="beranda-notification" aria-label="Notifikasi">
-              <Bell size={16} strokeWidth={1.8} />
-              <span className="beranda-notification__dot" />
-            </button>
           </div>
         </header>
 
         <div className="beranda-content">
+          {loadError ? (
+            <div className="beranda-data-alert" role="alert">
+              {loadError} {dataReady ? 'Angka yang tampil adalah data terakhir yang berhasil dimuat.' : 'Data belum dapat ditampilkan.'}
+              <button type="button" onClick={onRefresh} disabled={loading}>Coba Lagi</button>
+            </div>
+          ) : null}
           <section className="beranda-summary">
             <article className="beranda-summary-card">
               <div>
                 <p className="beranda-summary-card__label">Pendaftar yang Perlu Dicek</p>
                 <div className="beranda-summary-card__value">
-                  <strong>24</strong>
-                  <span>Mahasiswa</span>
+                  <strong>{dataReady ? pendingCount : '—'}</strong>
+                  <span>Pengajuan</span>
                 </div>
-                <div className="beranda-summary-card__badge beranda-summary-card__badge--warning">
+                <div className={'beranda-summary-card__badge beranda-summary-card__badge--' + (pendingCount ? 'warning' : 'info')}>
                   <span />
-                  Perlu ditinjau segera
+                  {pendingCount ? 'Perlu ditinjau segera' : 'Tidak ada antrean'}
                 </div>
               </div>
 
@@ -103,17 +109,34 @@ export default function Beranda({ onLogout, onNavigate, onDetail }) {
               <div>
                 <p className="beranda-summary-card__label">Pendaftar Baru</p>
                 <div className="beranda-summary-card__value">
-                  <strong>18</strong>
+                  <strong>{dataReady ? newStudentsCount : '—'}</strong>
                   <span>Mahasiswa</span>
                 </div>
                 <div className="beranda-summary-card__badge beranda-summary-card__badge--info">
                   <span />
-                  Minggu ini
+                  7 hari terakhir
                 </div>
               </div>
 
               <div className="beranda-summary-card__icon beranda-summary-card__icon--info">
                 <UserRoundPlus size={18} strokeWidth={1.8} />
+              </div>
+            </article>
+
+            <article className="beranda-summary-card">
+              <div>
+                <p className="beranda-summary-card__label">Anggota Aktif</p>
+                <div className="beranda-summary-card__value">
+                  <strong>{dataReady ? activeMembersCount : '—'}</strong>
+                  <span>Mahasiswa</span>
+                </div>
+                <div className="beranda-summary-card__badge beranda-summary-card__badge--info">
+                  <span />
+                  Sudah diterima
+                </div>
+              </div>
+              <div className="beranda-summary-card__icon beranda-summary-card__icon--info">
+                <Users size={18} strokeWidth={1.8} />
               </div>
             </article>
           </section>
@@ -123,10 +146,18 @@ export default function Beranda({ onLogout, onNavigate, onDetail }) {
               <div>
                 <h2>Pendaftar Terbaru</h2>
                 <p>Data registrasi calon anggota yang baru masuk sistem.</p>
+                {updatedLabel ? <small className="beranda-last-update">Terakhir diperbarui {updatedLabel} WIB</small> : null}
               </div>
-              <button type="button" className="beranda-see-all" onClick={() => onNavigate?.('/pendaftar')}>
-                Lihat Semua Pendaftar <span>→</span>
-              </button>
+              <div className="beranda-table-actions">
+                <button type="button" className="beranda-reload" disabled={loading} onClick={onRefresh}
+                  aria-label="Muat ulang data dashboard">
+                  <RefreshCw size={13} strokeWidth={1.8} />
+                  <span>{loading ? 'Memuat...' : 'Muat Ulang'}</span>
+                </button>
+                <button type="button" className="beranda-see-all" onClick={() => onNavigate?.('/pendaftar')}>
+                  Lihat Semua Pendaftar <span>→</span>
+                </button>
+              </div>
             </div>
 
             <div className="beranda-table-wrap">
@@ -142,19 +173,33 @@ export default function Beranda({ onLogout, onNavigate, onDetail }) {
                   </tr>
                 </thead>
                 <tbody>
+                  {!applicants.length ? (
+                    <tr>
+                      <td className="beranda-empty-row" colSpan={6}>
+                        {loading && !dataReady ? 'Memuat pendaftar dari Supabase...'
+                          : loadError && !dataReady ? 'Pendaftar belum dapat dimuat. Coba Lagi untuk memuat ulang.'
+                            : 'Belum ada pendaftaran yang masuk.'}
+                      </td>
+                    </tr>
+                  ) : null}
                   {applicants.slice(0, 5).map((item) => (
-                    <tr key={item.nim}>
-                      <td className="beranda-table__name">{item.name}</td>
-                      <td>{item.nim}</td>
-                      <td>{item.game}</td>
-                      <td>{item.date}</td>
-                      <td>
+                    <tr key={item.id}>
+                      <td data-label="Mahasiswa" className="beranda-table__name">
+                        <div className="beranda-person">
+                          <strong title={item.name}>{item.name}</strong>
+                          <span title={item.email}>{item.email}</span>
+                        </div>
+                      </td>
+                      <td data-label="NIM" className="admin-nim" title={item.nim || "NIM belum tersedia"}>{item.nim}</td>
+                      <td data-label="Game">{item.game}</td>
+                      <td data-label="Tanggal Daftar">{item.date}</td>
+                      <td data-label="Status">
                         <span className={`beranda-status beranda-status--${item.tone}`}>
                           <i />
                           {item.status}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Aksi">
                         <button type="button" className="beranda-detail" onClick={() => onDetail?.(item)}>
                           Detail <span>→</span>
                         </button>

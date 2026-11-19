@@ -1,13 +1,15 @@
-import { useMemo, useState } from 'react';
+import AdminSidebarProfile from '../components/AdminSidebarProfile';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { supabase } from '../lib/supabase';
+import { fetchGameDivisions } from '../lib/gameDivisions';
+import { fetchAdminEvents, formatEventDate } from '../lib/events';
 import {
   FileText,
-  Bell,
   CalendarDays,
   Eye,
   Gamepad2,
   Home,
   ImageUp,
-  LogOut,
   Pencil,
   Plus,
   Save,
@@ -20,70 +22,127 @@ import dashboardIcon from '../assets/ui-icons/Icon.png';
 import pendaftarIcon from '../assets/ui-icons/Icon-3.png';
 import anggotaIcon from '../assets/ui-icons/Icon-7.png';
 
-const seedEvents = [
-  {
-    id: 'rektor',
-    name: 'Piala Rektor Esports Championship 2025',
-    category: 'Campus Competition',
-    games: ['Mobile Legends', 'Valorant'],
-    date: '20 Maret 2025',
-    startDate: '15 Mar 2025',
-    endDate: '20 Mar 2025',
-    prize: 'Rp 10.000.000',
-    slots: '32',
-    status: 'TAMPIL',
-    description: 'Turnamen resmi antar fakultas Telkom University Purwokerto memperebutkan Piala Bergilir Rektor dan total hadiah tunai pembinaan.',
-    benefit: 'Sertifikat Resmi Rektorat, Hadiah Tunai, TAK / SKK Kemahasiswaan',
-    regulation: 'https://telupwt-esports.id/regulasi-piala-rektor-2025.pdf',
-    bannerName: 'piala-rektor-banner.webp',
-    bannerMeta: '1920 × 1080 px · 540 KB',
-  },
-  {
-    id: 'valorant',
-    name: 'Tel-U Purwokerto Valorant Clash Series',
-    category: 'Community Tournament',
-    games: ['Valorant'],
-    date: '08 April 2025',
-    startDate: '05 Apr 2025',
-    endDate: '08 Apr 2025',
-    prize: 'Rp 5.000.000',
-    slots: '16',
-    status: 'DRAFT',
-    description: 'Turnamen komunitas Valorant untuk mahasiswa Telkom University Purwokerto.',
-    benefit: 'Sertifikat, hadiah tunai',
-    regulation: '',
-    bannerName: 'valorant-clash-banner.webp',
-    bannerMeta: '1920 × 1080 px · 480 KB',
-  },
-  {
-    id: 'mlbb',
-    name: 'Purwokerto Inter-Collegiate MLBB Cup',
-    category: 'Inter-Campus Cup',
-    games: ['Mobile Legends'],
-    date: '14 Januari 2025',
-    startDate: '10 Jan 2025',
-    endDate: '14 Jan 2025',
-    prize: 'Rp 7.500.000',
-    slots: '32',
-    status: 'SELESAI',
-    description: 'Kompetisi Mobile Legends antarkampus wilayah Purwokerto.',
-    benefit: 'Hadiah tunai dan sertifikat',
-    regulation: '',
-    bannerName: 'mlbb-cup-banner.webp',
-    bannerMeta: '1920 × 1080 px · 460 KB',
-  },
-];
+function toUiEvent(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category || '',
+    games: row.games || [],
+    date: formatEventDate(row.end_date || row.start_date),
+    startDate: row.start_date || '',
+    endDate: row.end_date || '',
+    prize: row.prize_pool || '',
+    slots: row.slots == null ? '' : String(row.slots),
+    status: row.status,
+    description: row.description || '',
+    benefit: row.benefit || '',
+    regulation: row.regulation_url || '',
+    banner_url: row.banner_url || null,
+    bannerName: row.banner_url ? 'Banner tersimpan' : 'Belum ada banner',
+    bannerMeta: row.banner_url ? '' : 'Rekomendasi 1920 × 1080 px',
+  };
+}
 
-const gameOptions = ['Mobile Legends', 'Valorant', 'PUBG Mobile', 'eFootball'];
+async function validateEventBanner(file) {
+  if (!file) return null;
+  const extensions = { 'image/png': ['png'], 'image/jpeg': ['jpg', 'jpeg'], 'image/webp': ['webp'] };
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  if (!extensions[file.type]?.includes(extension)) return 'Banner harus PNG, JPG, atau WebP.';
+  if (!file.size || file.size > 2 * 1024 * 1024) return 'Banner maksimal 2 MB.';
+  try {
+    const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+    const matches = file.type === 'image/png'
+      ? [137,80,78,71,13,10,26,10].every((v, i) => bytes[i] === v)
+      : file.type === 'image/jpeg'
+        ? bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255
+        : String.fromCharCode(...bytes.slice(0, 4)) === 'RIFF' &&
+          String.fromCharCode(...bytes.slice(8, 12)) === 'WEBP';
+    if (!matches) return 'Isi file banner tidak sesuai dengan formatnya.';
+  } catch { return 'File banner tidak bisa dibaca.'; }
+  return null;
+}
 
-export default function KontenEvent({ onLogout, onNavigate }) {
-  const [events, setEvents] = useState(seedEvents);
+function EventBannerDetails({ src, file, fallback = '' }) {
+  const [dimensions, setDimensions] = useState(null);
+  useEffect(() => {
+    setDimensions(null);
+    if (!src) return;
+    let active = true;
+    const image = new Image();
+    image.onload = () => { if (active) setDimensions([image.naturalWidth, image.naturalHeight]); };
+    image.onerror = () => { if (active) setDimensions([]); };
+    image.src = src;
+    return () => { active = false; image.onload = null; image.onerror = null; };
+  }, [src]);
+  if (!src) return <small>{fallback || 'Belum ada file'}</small>;
+  if (!dimensions) return <small>Memuat ukuran gambar...</small>;
+  if (!dimensions.length) return <small>Gambar tidak dapat dibaca</small>;
+  const type = file ? file.name.split('.').pop().toUpperCase()
+    : src.split(/[?#]/)[0].split('.').pop().toUpperCase();
+  const size = file ? ' · ' + (file.size / 1024).toFixed(1) + ' KB' : '';
+  return <small>{dimensions[0]} × {dimensions[1]} px · {type}{size}</small>;
+}
+
+export default function KontenEvent({ adminUser, onLogout, onNavigate }) {
+  const [events, setEvents] = useState([]);
+  const [gameOptions, setGameOptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState('');
+  const [bannerFile, setBannerFile] = useState(null);
+  const [bannerPreview, setBannerPreview] = useState('');
+  const bannerInputRef = useRef(null);
   const [editingId, setEditingId] = useState(null);
   const [adding, setAdding] = useState(false);
   const editingEvent = useMemo(() => events.find((item) => item.id === editingId) || null, [events, editingId]);
   const [draft, setDraft] = useState(null);
 
+  useEffect(() => {
+    let active = true;
+    fetchAdminEvents().then((rows) => {
+      if (active) setEvents(rows.map(toUiEvent));
+    }).catch(() => {
+      if (active) setFeedback('Gagal memuat event. Jalankan migration 008_kelola_event.sql di Supabase SQL Editor.');
+    }).finally(() => { if (active) setLoading(false); });
+
+    fetchGameDivisions().then((rows) => {
+      if (active) setGameOptions(rows.map((row) => row.name));
+    }).catch(() => {
+      if (active) setFeedback((message) => message || 'Daftar cabang game gagal dimuat. Periksa koneksi Supabase.');
+    });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!bannerFile) { setBannerPreview(''); return; }
+    const src = URL.createObjectURL(bannerFile);
+    setBannerPreview(src);
+    return () => URL.revokeObjectURL(src);
+  }, [bannerFile]);
+
+  async function chooseBanner(file) {
+    if (!file) return;
+    const problem = await validateEventBanner(file);
+    if (problem) { setFeedback(problem); return; }
+    setBannerFile(file);
+    setFeedback('Banner dipilih. Klik Simpan untuk mengunggah dan mempublikasikan perubahan.');
+  }
+
+  function removeBanner() {
+    if (saving || !draft) return;
+    setBannerFile(null);
+    setDraft((current) => current ? {
+      ...current,
+      banner_url: null,
+      bannerName: 'Belum ada banner',
+      bannerMeta: 'Rekomendasi 1920 × 1080 px',
+    } : current);
+    setFeedback('Banner akan dihapus setelah kamu klik Simpan. Klik Batal jika ingin membatalkan perubahan.');
+  }
+
   function openEdit(eventItem) {
+    setBannerFile(null);
+    setFeedback('');
     setAdding(false);
     setEditingId(eventItem.id);
     setDraft({ ...eventItem, games: [...eventItem.games] });
@@ -93,6 +152,8 @@ export default function KontenEvent({ onLogout, onNavigate }) {
   }
 
   function openAdd() {
+    setBannerFile(null);
+    setFeedback('');
     setEditingId(null);
     setAdding(true);
     setDraft({
@@ -111,6 +172,7 @@ export default function KontenEvent({ onLogout, onNavigate }) {
       regulation: '',
       bannerName: '',
       bannerMeta: '',
+      banner_url: null,
     });
     requestAnimationFrame(() => {
       document.getElementById('event-edit-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -118,6 +180,7 @@ export default function KontenEvent({ onLogout, onNavigate }) {
   }
 
   function closeEdit() {
+    setBannerFile(null);
     setAdding(false);
     setEditingId(null);
     setDraft(null);
@@ -133,24 +196,135 @@ export default function KontenEvent({ onLogout, onNavigate }) {
     }));
   }
 
-  function saveEvent() {
-    if (!draft) return;
+  async function saveEvent() {
+    if (!draft || saving) return;
+    const name = draft.name.trim();
+    const category = draft.category.trim();
+    const description = draft.description.trim();
+    const benefit = draft.benefit.trim();
+    const prize = draft.prize.trim();
+    const regulation = draft.regulation.trim();
+    const slots = String(draft.slots).trim();
+    const validDate = (value) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+      const date = new Date(value + 'T00:00:00Z');
+      return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+    };
 
-    if (adding) {
-      const newEvent = {
-        ...draft,
-        id: 'event-' + Date.now(),
-        date: draft.endDate || draft.startDate || '-',
-        bannerName: draft.bannerName || 'event-banner.webp',
-        bannerMeta: draft.bannerMeta || '1920 × 1080 px',
-      };
-      setEvents((items) => [...items, newEvent]);
-      setAdding(false);
-      setDraft(null);
-      return;
+    if (name.length < 1 || name.length > 160) {
+      setFeedback('Nama Event wajib diisi (maksimal 160 karakter).'); return;
     }
+    if (category.length > 100) {
+      setFeedback('Kategori event maksimal 100 karakter.'); return;
+    }
+    if (draft.games.length > 20) {
+      setFeedback('Cabang game maksimal 20 pilihan.'); return;
+    }
+    if ((draft.startDate && !validDate(draft.startDate)) ||
+        (draft.endDate && !validDate(draft.endDate)) ||
+        (draft.startDate && draft.endDate && draft.endDate < draft.startDate)) {
+      setFeedback('Periksa tanggal event. Jika keduanya diisi, tanggal selesai tidak boleh sebelum tanggal mulai.'); return;
+    }
+    if (slots && (!/^\d{1,6}$/.test(slots) || Number(slots) < 1 || Number(slots) > 100000)) {
+      setFeedback('Jumlah slot, jika diisi, harus angka 1–100000.'); return;
+    }
+    if (description.length > 2000) {
+      setFeedback('Deskripsi maksimal 2000 karakter.'); return;
+    }
+    if (prize.length > 100 || benefit.length > 500) {
+      setFeedback('Prize Pool atau Benefit terlalu panjang.'); return;
+    }
+    if (regulation) {
+      try {
+        const url = new URL(regulation);
+        if (!['https:', 'http:'].includes(url.protocol) || regulation.length > 1000) throw new Error();
+      } catch {
+        setFeedback('Link Jadwal / Regulasi harus URL lengkap http:// atau https://.'); return;
+      }
+    }
+    const problem = await validateEventBanner(bannerFile);
+    if (problem) { setFeedback(problem); return; }
+    setSaving(true);
+    setFeedback('');
+    const bucket = supabase.storage.from('ridoooo-event-media');
+    let uploadedPath = null;
+    try {
+      const values = {
+        name, category, games: draft.games, start_date: draft.startDate || null,
+        end_date: draft.endDate || null, prize_pool: prize, slots: slots ? Number(slots) : null,
+        status: draft.status, description, benefit, regulation_url: regulation,
+        banner_url: draft.banner_url || null,
+        updated_at: new Date().toISOString(),
+      };
+      if (bannerFile) {
+        const extension = bannerFile.type === 'image/png' ? 'png'
+          : bannerFile.type === 'image/webp' ? 'webp' : 'jpg';
+        uploadedPath = 'banners/' + crypto.randomUUID() + '.' + extension;
+        const { error: uploadError } = await bucket.upload(uploadedPath, bannerFile, {
+          contentType: bannerFile.type, upsert: false,
+        });
+        if (uploadError) throw uploadError;
+        values.banner_url = bucket.getPublicUrl(uploadedPath).data.publicUrl;
+      }
+      const query = adding
+        ? supabase.from('ridoooo_events').insert(values)
+        : supabase.from('ridoooo_events').update(values).eq('id', draft.id);
+      const { data, error } = await query.select('*').single();
+      if (error) throw error;
+      const saved = toUiEvent(data);
+      setEvents((items) => {
+        const updated = adding ? [...items, saved] : items.map((item) => item.id === saved.id ? saved : item);
+        return updated.sort((a, b) => (b.endDate || b.startDate || '').localeCompare(a.endDate || a.startDate || ''));
+      });
+      const oldBanner = editingEvent?.banner_url || null;
+      closeEdit();
+      let notice = oldBanner && !values.banner_url
+        ? 'Banner berhasil dihapus dari event. Event tetap tersimpan.'
+        : 'Event berhasil disimpan di Supabase. Status Tampil akan muncul di website User.';
+      if (oldBanner && oldBanner !== values.banner_url &&
+          oldBanner.includes('/storage/v1/object/public/ridoooo-event-media/banners/')) {
+        const oldPath = oldBanner.split('/ridoooo-event-media/')[1]?.split('?')[0];
+        if (oldPath?.startsWith('banners/')) {
+          try {
+            const { error: deleteError } = await bucket.remove([decodeURIComponent(oldPath)]);
+            if (deleteError) throw deleteError;
+          } catch {
+            notice += ' Namun file lama gagal dibersihkan dari Storage.';
+          }
+        }
+      }
+      setFeedback(notice);
+    } catch (error) {
+      if (uploadedPath) await bucket.remove([uploadedPath]).catch(() => {});
+      setFeedback('Gagal menyimpan event: ' + (error.message || 'Periksa koneksi dan SQL migration 008.'));
+    } finally {
+      setSaving(false);
+    }
+  }
 
-    setEvents((items) => items.map((item) => (item.id === draft.id ? { ...draft } : item)));
+  async function deleteEvent(eventItem) {
+    if (saving || !window.confirm('Hapus event "' + eventItem.name + '" secara permanen?')) return;
+    setSaving(true);
+    setFeedback('');
+    try {
+      const { data, error } = await supabase.from('ridoooo_events')
+        .delete().eq('id', eventItem.id).select('id').single();
+      if (error) throw error;
+      if (!data) throw new Error('Event tidak ditemukan atau akses Admin ditolak.');
+      setEvents((items) => items.filter((item) => item.id !== eventItem.id));
+      if (editingId === eventItem.id) closeEdit();
+      setFeedback('Event berhasil dihapus dari Admin dan website User.');
+      if (eventItem.banner_url?.includes('/storage/v1/object/public/ridoooo-event-media/banners/')) {
+        const path = eventItem.banner_url.split('/ridoooo-event-media/')[1]?.split('?')[0];
+        if (path?.startsWith('banners/')) {
+          supabase.storage.from('ridoooo-event-media').remove([decodeURIComponent(path)]).catch(() => {});
+        }
+      }
+    } catch (error) {
+      setFeedback('Gagal menghapus event: ' + (error.message || 'Periksa koneksi dan hak akses.'));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -187,18 +361,7 @@ export default function KontenEvent({ onLogout, onNavigate }) {
           </button>
         </nav>
 
-        <div className="beranda-sidebar__bottom">
-          <div className="beranda-admin">
-            <div className="beranda-admin__avatar">RP</div>
-            <div className="beranda-admin__copy">
-              <strong>Raka Pratan</strong>
-              <span>SUPER ADMIN</span>
-            </div>
-            <button type="button" className="beranda-admin__logout" onClick={onLogout} aria-label="Logout">
-              <LogOut size={15} strokeWidth={1.8} />
-            </button>
-          </div>
-        </div>
+        <AdminSidebarProfile adminUser={adminUser} onLogout={onLogout} />
       </aside>
 
       <section className="event-main">
@@ -207,12 +370,8 @@ export default function KontenEvent({ onLogout, onNavigate }) {
           <div className="beranda-header__actions">
             <div className="beranda-period">
               <span className="beranda-period__dot" />
-              <span>Periode Aktif: Registrasi 2024/2025</span>
+              <span>Data Pendaftaran UKM Esports</span>
             </div>
-            <button type="button" className="beranda-notification" aria-label="Notifikasi">
-              <Bell size={16} strokeWidth={1.8} />
-              <span className="beranda-notification__dot" />
-            </button>
           </div>
         </header>
 
@@ -232,12 +391,14 @@ export default function KontenEvent({ onLogout, onNavigate }) {
             </button>
           </div>
 
+          {!draft && feedback ? <p className="event-feedback" role="status">{feedback}</p> : null}
+
           {!adding ? (
             <>
           <section className="event-topbar">
             <div className="event-count">
               <span className="event-count__dot" />
-              <strong>3 Event Terdaftar</strong>
+              <strong>{events.length} Event Terdaftar</strong>
             </div>
             <button type="button" className="event-add" onClick={openAdd}>
               <Plus size={13} strokeWidth={2.1} />
@@ -251,7 +412,9 @@ export default function KontenEvent({ onLogout, onNavigate }) {
               <h2>Daftar Event / Turnamen</h2>
             </div>
 
-            <div className="event-table-wrap">
+            {loading ? <p className="event-feedback">Memuat data event...</p> : null}
+            {!loading && !events.length ? <p className="event-feedback">Belum ada event tersimpan. Klik Tambah Event untuk membuat event pertama.</p> : null}
+            <div className="event-table-wrap" tabIndex={0} role="region" aria-label="Daftar event, dapat digeser secara horizontal bila diperlukan">
               <table className="event-table">
                 <thead>
                   <tr>
@@ -268,38 +431,40 @@ export default function KontenEvent({ onLogout, onNavigate }) {
                 <tbody>
                   {events.map((item) => (
                     <tr key={item.id} className={editingId === item.id ? 'event-row event-row--editing' : 'event-row'}>
-                      <td>
-                        <div className={'event-thumb event-thumb--' + item.id}>
-                          <span>ESPORTS</span>
+                      <td data-label="Banner">
+                        <div className={'event-thumb event-thumb--' + item.id}
+                          style={item.banner_url ? { backgroundImage: 'url(' + JSON.stringify(item.banner_url) + ')', backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}>
+                          {!item.banner_url ? <span>ESPORTS</span> : null}
                         </div>
                       </td>
-                      <td>
+                      <td data-label="Nama Event">
                         <div className="event-name">
                           <strong>{item.name}</strong>
-                          <span>{item.category}</span>
+                          {item.category ? <span>{item.category}</span> : null}
                         </div>
                       </td>
-                      <td>
+                      <td data-label="Game">
                         <div className="event-game-tags">
-                          {item.games.map((game) => <span key={game}>{game}</span>)}
+                          {item.games.length ? item.games.map((game) => <span key={game}>{game}</span>) : <span>—</span>}
                         </div>
                       </td>
-                      <td><span className="event-date">{item.date}</span></td>
-                      <td><strong className="event-prize">{item.prize}</strong></td>
-                      <td><span className="event-slot">{item.slots} Slot</span></td>
-                      <td>
+                      <td data-label="Tanggal"><span className="event-date">{item.date}</span></td>
+                      <td data-label="Prize Pool"><strong className="event-prize">{item.prize || '—'}</strong></td>
+                      <td data-label="Slot"><span className="event-slot">{item.slots ? item.slots + ' Slot' : '—'}</span></td>
+                      <td data-label="Status">
                         <span className={'event-status event-status--' + item.status.toLowerCase()}>
                           {item.status === 'TAMPIL' ? <Eye size={10} strokeWidth={2} /> : null}
                           {item.status}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Aksi">
                         <div className="event-actions">
                           <button type="button" className={editingId === item.id ? 'event-edit event-edit--active' : 'event-edit'} onClick={() => openEdit(item)}>
                             <Pencil size={12} strokeWidth={2} />
                             <span>Edit</span>
                           </button>
-                          <button type="button" className="event-delete" aria-label={'Hapus ' + item.name}>
+                          <button type="button" className="event-delete" aria-label={'Hapus ' + item.name}
+                            disabled={saving} onClick={() => deleteEvent(item)}>
                             <Trash2 size={13} strokeWidth={1.9} />
                           </button>
                         </div>
@@ -324,14 +489,14 @@ export default function KontenEvent({ onLogout, onNavigate }) {
                     <h2>{adding ? 'Tambah Event Baru' : 'Edit Event: ' + editingEvent.name}</h2>
                     {!adding ? <span>SEDANG DISUNTING</span> : null}
                   </div>
-                  <p>{adding ? 'Lengkapi detail publikasi dan informasi turnamen baru untuk website mahasiswa.' : 'Perbarui detail publikasi dan informasi turnamen untuk website mahasiswa.'}</p>
+                  <p>Cukup isi Nama Event. Kolom lainnya opsional sesuai kebutuhan acara.</p>
                 </div>
               </div>
 
               <div className="event-edit-body">
                 <div className="event-edit-grid event-edit-grid--top">
                   <label className="event-field">
-                    <span>Nama Event</span>
+                    <span>Nama Event (Wajib)</span>
                     <input
                       placeholder={adding ? 'Contoh: Piala Rektor Esports Championship 2025' : ''}
                       value={draft.name}
@@ -340,7 +505,7 @@ export default function KontenEvent({ onLogout, onNavigate }) {
                   </label>
 
                   <label className="event-field">
-                    <span>Kategori Event</span>
+                    <span>Kategori Event (Opsional)</span>
                     <input
                       placeholder={adding ? 'Pilih Kategori Event (misal: Campus Competition, Community Tournament)' : ''}
                       value={draft.category}
@@ -350,9 +515,9 @@ export default function KontenEvent({ onLogout, onNavigate }) {
                 </div>
 
                 <div className="event-field">
-                  <span>Cabang Game (Bisa pilih satu atau lebih)</span>
+                  <span>Cabang Game (Opsional, bisa pilih lebih dari satu)</span>
                   <div className="event-game-options">
-                    {gameOptions.map((game) => (
+                    {[...new Set([...gameOptions, ...draft.games])].map((game) => (
                       <button
                         key={game}
                         type="button"
@@ -368,10 +533,11 @@ export default function KontenEvent({ onLogout, onNavigate }) {
 
                 <div className="event-edit-grid event-edit-grid--dates">
                   <label className="event-field">
-                    <span>Tanggal Mulai</span>
+                    <span>Tanggal Mulai (Opsional)</span>
                     <div className="event-date-input">
                       <input
-                        placeholder={adding ? 'Pilih tanggal mulai' : ''}
+                        type="date"
+                        max="2100-12-31"
                         value={draft.startDate}
                         onChange={(e) => setDraft({ ...draft, startDate: e.target.value })}
                       />
@@ -380,10 +546,12 @@ export default function KontenEvent({ onLogout, onNavigate }) {
                   </label>
 
                   <label className="event-field">
-                    <span>Tanggal Selesai</span>
+                    <span>Tanggal Selesai (Opsional)</span>
                     <div className="event-date-input">
                       <input
-                        placeholder={adding ? 'Pilih tanggal selesai' : ''}
+                        type="date"
+                        min={draft.startDate || undefined}
+                        max="2100-12-31"
                         value={draft.endDate}
                         onChange={(e) => setDraft({ ...draft, endDate: e.target.value })}
                       />
@@ -394,7 +562,7 @@ export default function KontenEvent({ onLogout, onNavigate }) {
 
                 <div className="event-edit-grid event-edit-grid--numbers">
                   <label className="event-field">
-                    <span>Total Prize Pool</span>
+                    <span>Total Prize Pool (Opsional)</span>
                     <input
                       placeholder={adding ? 'Contoh: Rp 10.000.000' : ''}
                       value={draft.prize}
@@ -403,17 +571,18 @@ export default function KontenEvent({ onLogout, onNavigate }) {
                   </label>
 
                   <label className="event-field">
-                    <span>Jumlah Slot</span>
+                    <span>Jumlah Slot (Opsional)</span>
                     <input
                       placeholder={adding ? 'Contoh: 32' : ''}
                       value={draft.slots}
+                      inputMode="numeric"
                       onChange={(e) => setDraft({ ...draft, slots: e.target.value })}
                     />
                   </label>
                 </div>
 
                 <label className="event-field">
-                  <span>Deskripsi Singkat</span>
+                  <span>Deskripsi Singkat (Opsional)</span>
                   <textarea
                     rows={4}
                     placeholder={adding ? 'Tuliskan deskripsi singkat event yang akan tampil di landing page...' : ''}
@@ -432,7 +601,7 @@ export default function KontenEvent({ onLogout, onNavigate }) {
                 </label>
 
                 <label className="event-field">
-                  <span>Link Jadwal / Regulasi</span>
+                  <span>Link Jadwal / Regulasi (Opsional)</span>
                   <input
                     className="event-field__mono"
                     placeholder={adding ? 'https://... (link file PDF regulasi atau jadwal)' : ''}
@@ -443,37 +612,55 @@ export default function KontenEvent({ onLogout, onNavigate }) {
 
                 <div className="event-edit-bottom-grid">
                   <div className="event-banner-field">
-                    <span>Banner Event (16:9)</span>
+                    <span>Banner Event (Opsional, 16:9)</span>
+                    <input ref={bannerInputRef} type="file" hidden accept="image/png,image/jpeg,image/webp"
+                      onChange={(e) => { chooseBanner(e.target.files?.[0]); e.target.value = ''; }} />
                     {adding ? (
                       <div className="event-add-banner-box">
-                        <div className="event-add-banner-drop">
-                          <ImageUp size={22} strokeWidth={1.7} />
-                          <strong>Pilih berkas banner atau tarik ke sini</strong>
+                        <div className="event-add-banner-drop"
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => { e.preventDefault(); if (!saving) chooseBanner(e.dataTransfer?.files?.[0]); }}>
+                          {bannerPreview
+                            ? <img src={bannerPreview} alt="Preview banner event" style={{ height: 80, maxWidth: '100%', objectFit: 'contain' }} />
+                            : <ImageUp size={22} strokeWidth={1.7} />}
+                          <strong>{bannerFile ? bannerFile.name : 'Pilih berkas banner atau tarik ke sini'}</strong>
                           <span>Format PNG, JPG, WebP rasio 16:9 (maks. 2 MB)</span>
                         </div>
                         <div className="event-add-banner-meta">
                           <div>
-                            <strong>Belum ada file dipilih</strong>
-                            <span>Rekomendasi 1920 × 1080 px</span>
+                            <strong>{bannerFile ? bannerFile.name : 'Belum ada file dipilih'}</strong>
+                            <EventBannerDetails src={bannerPreview} file={bannerFile} fallback="Rekomendasi 1920 × 1080 px" />
                           </div>
-                          <button type="button">
+                          <button type="button" disabled={saving} onClick={() => bannerInputRef.current?.click()}>
                             <ImageUp size={11} strokeWidth={1.9} />
-                            <span>Unggah Banner</span>
+                            <span>Pilih Banner</span>
                           </button>
+                          {bannerFile ? <button type="button" className="event-banner-remove" disabled={saving} onClick={removeBanner}>
+                            <Trash2 size={11} strokeWidth={1.9} />
+                            <span>Hapus Banner</span>
+                          </button> : null}
                         </div>
                       </div>
                     ) : (
                       <div className="event-banner-preview">
-                        <div className="event-banner-art event-banner-art--rektor">
-                          <span>ESPORTS</span>
+                        <div className="event-banner-art" style={bannerPreview || draft.banner_url ? {
+                          backgroundImage: 'url(' + JSON.stringify(bannerPreview || draft.banner_url) + ')',
+                          backgroundSize: 'cover', backgroundPosition: 'center',
+                        } : undefined}>
+                          {!bannerPreview && !draft.banner_url ? <span>ESPORTS</span> : null}
                         </div>
                         <div>
-                          <strong>{draft.bannerName}</strong>
-                          <small>{draft.bannerMeta}</small>
-                          <button type="button">
+                          <strong>{bannerFile?.name || draft.bannerName}</strong>
+                          <EventBannerDetails src={bannerPreview || draft.banner_url} file={bannerFile} fallback={draft.bannerMeta} />
+                          <button type="button" disabled={saving} onClick={() => bannerInputRef.current?.click()}>
                             <ImageUp size={11} strokeWidth={1.9} />
                             <span>Ganti Banner</span>
                           </button>
+                          {(bannerFile || draft.banner_url) ? <button type="button" className="event-banner-remove"
+                            disabled={saving} onClick={removeBanner}>
+                            <Trash2 size={11} strokeWidth={1.9} />
+                            <span>Hapus Banner</span>
+                          </button> : null}
                         </div>
                       </div>
                     )}
@@ -497,11 +684,12 @@ export default function KontenEvent({ onLogout, onNavigate }) {
                 </div>
               </div>
 
+              {feedback ? <p className="event-feedback" role="alert">{feedback}</p> : null}
               <div className="event-edit-footer">
                 <button type="button" className="event-edit-cancel" onClick={closeEdit}>Batal</button>
-                <button type="button" className="event-edit-save" onClick={saveEvent}>
+                <button type="button" className="event-edit-save" disabled={saving} onClick={saveEvent}>
                   <Save size={13} strokeWidth={2} />
-                  <span>{adding ? 'Simpan Event Baru' : 'Simpan Perubahan Event'}</span>
+                  <span>{saving ? 'Menyimpan...' : adding ? 'Simpan Event Baru' : 'Simpan Perubahan Event'}</span>
                 </button>
               </div>
             </section>

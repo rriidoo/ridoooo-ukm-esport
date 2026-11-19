@@ -2,14 +2,14 @@ import BrandHeader from '../components/BrandHeader';
 import Footer from '../components/Footer';
 import OtpCard from '../components/OtpCard';
 
-export default function KodeOtp({ email, onBack, onVerified }) {
+export default function KodeOtp({ email, onBack, onVerified, onResend }) {
   return (
     <main className="otp-page">
       <div className="otp-page__main">
         <div className="otp-page__brand">
           <BrandHeader />
         </div>
-        <OtpCard email={email} onBack={onBack} onVerified={onVerified} />
+        <OtpCard email={email} onBack={onBack} onVerified={onVerified} onResend={onResend} />
       </div>
       <Footer />
     </main>

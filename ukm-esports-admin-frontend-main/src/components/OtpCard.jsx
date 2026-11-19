@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import backIcon from '../assets/icon-back.svg';
 
-const OTP_LENGTH = 4;
-const RESEND_SECONDS = 45;
+const OTP_LENGTH = 6;
+const RESEND_SECONDS = 60;
 
-export default function OtpCard({ email, onBack, onVerified }) {
+export default function OtpCard({ email, onBack, onVerified, onResend }) {
   const [digits, setDigits] = useState(Array(OTP_LENGTH).fill(''));
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
+  const [working, setWorking] = useState('');
+  const [error, setError] = useState('');
   const inputsRef = useRef([]);
 
   useEffect(() => {
@@ -62,27 +64,45 @@ export default function OtpCard({ email, onBack, onVerified }) {
     inputsRef.current[Math.min(pasted.length, OTP_LENGTH) - 1]?.focus();
   }
 
-  function handleVerify(event) {
+  async function handleVerify(event) {
     event.preventDefault();
-    if (!canVerify) return;
-    onVerified?.(otp);
+    if (!canVerify || working) return;
+    setError('');
+    setWorking('verify');
+    try {
+      await onVerified?.(otp);
+    } catch (err) {
+      setError(err.message || 'Kode OTP gagal diverifikasi. Silakan coba lagi.');
+    } finally {
+      setWorking('');
+    }
   }
 
-  function handleResend() {
-    if (secondsLeft > 0) return;
-    setDigits(Array(OTP_LENGTH).fill(''));
-    setSecondsLeft(RESEND_SECONDS);
-    inputsRef.current[0]?.focus();
+  async function handleResend() {
+    if (secondsLeft > 0 || working) return;
+    setError('');
+    setWorking('resend');
+    try {
+      if (!onResend) throw new Error('Pengiriman ulang kode belum tersedia.');
+      await onResend();
+      setDigits(Array(OTP_LENGTH).fill(''));
+      setSecondsLeft(RESEND_SECONDS);
+      inputsRef.current[0]?.focus();
+    } catch (err) {
+      setError(err.message || 'Gagal mengirim ulang kode OTP.');
+    } finally {
+      setWorking('');
+    }
   }
 
   const timerText = `00:${String(secondsLeft).padStart(2, '0')}`;
 
   return (
-    <section className="otp-card" aria-labelledby="otp-title">
+    <section className={error ? 'otp-card otp-card--error' : 'otp-card'} aria-labelledby="otp-title">
       <div className="otp-card__header">
         <h2 id="otp-title">Verifikasi Kode Keamanan</h2>
-        <p>Masukkan 4 digit kode otorisasi yang telah dikirimkan ke email:</p>
-        <strong>{email || 'admin@telkom-pwt.ac.id'}</strong>
+        <p>Masukkan 6 digit kode pemulihan yang telah dikirimkan ke email:</p>
+        <strong>{email || 'Email pemulihan belum tersedia'}</strong>
       </div>
 
       <form className="otp-form" onSubmit={handleVerify}>
@@ -111,7 +131,7 @@ export default function OtpCard({ email, onBack, onVerified }) {
           <button
             type="button"
             className={secondsLeft > 0 ? 'otp-resend otp-resend--disabled' : 'otp-resend'}
-            disabled={secondsLeft > 0}
+            disabled={secondsLeft > 0 || Boolean(working)}
             onClick={handleResend}
           >
             {secondsLeft > 0 ? (
@@ -125,13 +145,14 @@ export default function OtpCard({ email, onBack, onVerified }) {
           </button>
         </div>
 
-        <button className="otp-submit" type="submit" disabled={!canVerify}>
-          Verifikasi &amp; Lanjutkan
+        {error && <p role="alert" style={{ color: '#ff7777', marginBottom: 12 }}>{error}</p>}
+        <button className="otp-submit" type="submit" disabled={!canVerify || Boolean(working)}>
+          {working === 'verify' ? 'Memverifikasi...' : 'Verifikasi & Lanjutkan'}
         </button>
 
-        <button className="otp-back" type="button" onClick={onBack}>
+        <button className="otp-back" type="button" onClick={onBack} disabled={Boolean(working)}>
           <img src={backIcon} alt="" aria-hidden="true" />
-          <span>Kembali ke Login Admin</span>
+          <span>Kembali ke Lupa Password</span>
         </button>
       </form>
     </section>

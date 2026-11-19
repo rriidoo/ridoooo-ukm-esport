@@ -1,10 +1,13 @@
+import AdminSidebarProfile from '../components/AdminSidebarProfile';
+import { useState } from 'react';
+import { supabase } from '../lib/supabase';
+import PrivateDocumentPreview from '../components/PrivateDocumentPreview';
 import {
   ArrowLeft,
-  Bell,
   Download,
   Eye,
   FileText,
-  LogOut,
+
   Table2,
 } from 'lucide-react';
 import logo from '../assets/logo-figma.png';
@@ -26,8 +29,41 @@ const fallbackMember = {
   cohort: '2023',
 };
 
-export default function DetailAnggota({ member, onBack, onLogout, onNavigate }) {
-  const data = member || fallbackMember;
+export default function DetailAnggota({ adminUser, member, onBack, onLogout, onNavigate, onRemoved }) {
+  const data = member;
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function viewDocument(path, download = false) {
+    if (!path) { setError('Dokumen tidak tersedia.'); return; }
+    setError('');
+    const { data: signed, error: signedError } = await supabase.storage
+      .from('ridoooo-application-documents')
+      .createSignedUrl(path, 60, { download });
+    if (signedError || !signed?.signedUrl) {
+      setError(signedError?.message || 'Dokumen tidak bisa dibuka.');
+      return;
+    }
+    window.open(signed.signedUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  async function removeMembership() {
+    if (!window.confirm('Hapus keanggotaan ' + data.name + ' dari divisi ' + data.game + '?\n\nRiwayat dan akun mahasiswa tetap tersimpan. Mahasiswa boleh mendaftar ulang ke divisi ini setelah dihapus.')) return;
+    setBusy(true); setError('');
+    const { error: rpcError } = await supabase.rpc('ridoooo_remove_member', {
+      p_application_id: data.id,
+      p_reason: null
+    });
+    setBusy(false);
+    if (rpcError) { setError(rpcError.message); return; }
+    await onRemoved?.();
+    onBack?.();
+  }
+
+  if (!data) return <main style={{ padding: 40 }}>
+    <p>Pilih anggota dari daftar terlebih dahulu.</p>
+    <button onClick={onBack}>Kembali ke Anggota</button>
+  </main>;
 
   return (
     <main className="detail-anggota-page">
@@ -67,18 +103,7 @@ export default function DetailAnggota({ member, onBack, onLogout, onNavigate }) 
           </button>
         </nav>
 
-        <div className="beranda-sidebar__bottom">
-          <div className="beranda-admin">
-            <div className="beranda-admin__avatar">RP</div>
-            <div className="beranda-admin__copy">
-              <strong>Raka Pratan</strong>
-              <span>SUPER ADMIN</span>
-            </div>
-            <button type="button" className="beranda-admin__logout" onClick={onLogout} aria-label="Logout">
-              <LogOut size={15} strokeWidth={1.8} />
-            </button>
-          </div>
-        </div>
+        <AdminSidebarProfile adminUser={adminUser} onLogout={onLogout} />
       </aside>
 
       <section className="detail-anggota-main">
@@ -87,12 +112,8 @@ export default function DetailAnggota({ member, onBack, onLogout, onNavigate }) 
           <div className="beranda-header__actions">
             <div className="beranda-period">
               <span className="beranda-period__dot" />
-              <span>Periode Aktif: Registrasi 2024/2025</span>
+              <span>Data Pendaftaran UKM Esports</span>
             </div>
-            <button type="button" className="beranda-notification" aria-label="Notifikasi">
-              <Bell size={16} strokeWidth={1.8} />
-              <span className="beranda-notification__dot" />
-            </button>
           </div>
         </header>
 
@@ -106,9 +127,9 @@ export default function DetailAnggota({ member, onBack, onLogout, onNavigate }) 
             <div>
               <div className="detail-anggota-hero__title-row">
                 <h2>Detail Anggota</h2>
-                <span className="detail-anggota-hero__id">#REG-2024-0892</span>
+                <span className="detail-anggota-hero__id">#{data.id.slice(0, 8).toUpperCase()}</span>
               </div>
-              <p>Diterima 14 Okt 2024, 10:24 WIB</p>
+              <p>Diterima {data.reviewed_at ? new Date(data.reviewed_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) + ' WIB' : '—'}</p>
             </div>
           </section>
 
@@ -125,10 +146,10 @@ export default function DetailAnggota({ member, onBack, onLogout, onNavigate }) 
               </div>
               <div className="detail-anggota-info">
                 <span>NIM</span>
-                <strong className="detail-anggota-mono">{data.nim}</strong>
+                <strong className="detail-anggota-mono">{data.nim || '—'}</strong>
               </div>
               <div className="detail-anggota-info">
-                <span>Email Kampus</span>
+                <span>Email</span>
                 <strong className="detail-anggota-info__regular">{data.email}</strong>
               </div>
               <div className="detail-anggota-info">
@@ -141,7 +162,7 @@ export default function DetailAnggota({ member, onBack, onLogout, onNavigate }) 
               </div>
               <div className="detail-anggota-info">
                 <span>Nomor WhatsApp</span>
-                <strong className="detail-anggota-mono">+62 812-3456-7890</strong>
+                <strong className="detail-anggota-mono">{data.whatsapp || '—'}</strong>
               </div>
             </div>
           </section>
@@ -155,11 +176,11 @@ export default function DetailAnggota({ member, onBack, onLogout, onNavigate }) 
             <div className="detail-anggota-info-grid detail-anggota-info-grid--game">
               <div className="detail-anggota-info">
                 <span>Game / Divisi</span>
-                <strong>{member ? data.game : 'Mobile Legends'}</strong>
+                <strong>{data.game}</strong>
               </div>
               <div className="detail-anggota-info">
                 <span>Nickname / ID Game</span>
-                <strong className="detail-anggota-mono">Progamer#1234</strong>
+                <strong className="detail-anggota-mono">{data.game_nickname || '—'}</strong>
               </div>
             </div>
           </section>
@@ -171,7 +192,7 @@ export default function DetailAnggota({ member, onBack, onLogout, onNavigate }) 
             </div>
 
             <div className="detail-anggota-motivation">
-              Saya ingin meningkatkan kemampuan bermain secara kompetitif dan mengikuti turnamen nasional mewakili kampus bersama komunitas Tel-U Esports. Selain itu saya ingin berkontribusi dalam manajemen scrim dan latihan rutin divisi Mobile Legends.
+              {data.motivation || 'Tidak ada motivasi tertulis.'}
             </div>
           </section>
 
@@ -186,23 +207,18 @@ export default function DetailAnggota({ member, onBack, onLogout, onNavigate }) 
                 <div className="detail-anggota-document__head">
                   <div>
                     <h4>Kartu Tanda Mahasiswa (KTM)</h4>
-                    <p>ktm_rido_sihombing_23102014.pdf</p>
+                    <p>{data.ktm_path?.split('/').pop() || 'Berkas tidak tersedia'}</p>
                   </div>
-                  <span>1.8 MB</span>
+                  <span>Privat</span>
                 </div>
 
                 <div className="detail-anggota-document__preview detail-anggota-document__preview--ktm">
-                  <div className="detail-anggota-document__ktm-mark">TEL-U</div>
-                  <div>
-                    <strong>{data.name}</strong>
-                    <span>{data.nim}</span>
-                    <span>{data.study}</span>
-                  </div>
+                  <PrivateDocumentPreview path={data.ktm_path} label="KTM" />
                 </div>
 
                 <div className="detail-anggota-document__actions">
-                  <button type="button"><Eye size={13} strokeWidth={1.9} /> Lihat Penuh</button>
-                  <button type="button"><Download size={13} strokeWidth={1.9} /> Download</button>
+                  <button type="button" onClick={() => viewDocument(data.ktm_path)}><Eye size={13} strokeWidth={1.9} /> Lihat Penuh</button>
+                  <button type="button" onClick={() => viewDocument(data.ktm_path, true)}><Download size={13} strokeWidth={1.9} /> Download</button>
                 </div>
               </article>
 
@@ -210,30 +226,27 @@ export default function DetailAnggota({ member, onBack, onLogout, onNavigate }) 
                 <div className="detail-anggota-document__head">
                   <div>
                     <h4>Bukti Follow Instagram</h4>
-                    <p>bukti_follow_instagram.jpg</p>
+                    <p>{data.instagram_path?.split('/').pop() || 'Berkas tidak tersedia'}</p>
                   </div>
-                  <span>850 KB</span>
+                  <span>Privat</span>
                 </div>
 
                 <div className="detail-anggota-document__preview detail-anggota-document__preview--instagram">
-                  <div className="detail-anggota-document__screenbar" />
-                  <div className="detail-anggota-document__screenbody">
-                    <span />
-                    <span />
-                    <span />
-                  </div>
+                  <PrivateDocumentPreview path={data.instagram_path} label="Bukti Follow Instagram" />
                 </div>
 
                 <div className="detail-anggota-document__actions">
-                  <button type="button"><Eye size={13} strokeWidth={1.9} /> Lihat Penuh</button>
-                  <button type="button"><Download size={13} strokeWidth={1.9} /> Download</button>
+                  <button type="button" onClick={() => viewDocument(data.instagram_path)}><Eye size={13} strokeWidth={1.9} /> Lihat Penuh</button>
+                  <button type="button" onClick={() => viewDocument(data.instagram_path, true)}><Download size={13} strokeWidth={1.9} /> Download</button>
                 </div>
               </article>
             </div>
           </section>
 
           <section className="detail-anggota-actions">
-            <button type="button" className="detail-anggota-delete">Delate Anggota</button>
+            {error && <p role="alert" style={{ color: '#ff7777', marginBottom: 12 }}>{error}</p>}
+            <button type="button" className="detail-anggota-delete" disabled={busy}
+              onClick={removeMembership}>{busy ? 'Memproses...' : 'Hapus Anggota'}</button>
           </section>
         </div>
       </section>

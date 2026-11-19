@@ -314,6 +314,8 @@ a { color: inherit; text-decoration: none; }
   .mobile-event-top time { color: #8c96a8; font-size: 9.11px; }
   .mobile-event-card h3 { max-width: 318.93px; margin: 12.76px 0 10.93px; font-size: 14.58px; line-height: 20.05px; }
   .mobile-event-card p { margin: 0; color: #9aa4b6; font-size: 10px; line-height: 14.58px; }
+  .mobile-event-benefit { margin-top: 11px; color: #aab7cd; font-size: 10px; line-height: 15px; overflow-wrap: anywhere; }
+  .mobile-event-benefit strong { color: #e8eef9; }
   .mobile-event-bottom { margin-top: 20.05px; display: flex; align-items: center; justify-content: space-between; gap: 12.76px; }
   .mobile-event-bottom strong { font-size: 9.11px; }
   .mobile-event-bottom a { display: flex; align-items: center; color: #ff2745; font-size: 9.11px; font-weight: 700; }
@@ -514,6 +516,8 @@ a { color: inherit; text-decoration: none; }
   .desktop-event-top time { color: #8c96a8; font-size: 10px; }
   .desktop-event-card h3 { margin: 13px 0 10px; font-size: 16px; line-height: 22px; }
   .desktop-event-card p { margin: 0; color: #9aa4b6; font-size: 11px; line-height: 16px; }
+  .desktop-event-benefit { margin-top: 11px; color: #aab7cd; font-size: 11px; line-height: 16px; overflow-wrap: anywhere; }
+  .desktop-event-benefit strong { color: #e8eef9; }
   .desktop-event-bottom { margin-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .desktop-event-bottom strong { font-size: 10px; }
   .desktop-event-bottom a { display: flex; align-items: center; color: #ff2745; font-size: 10px; font-weight: 700; }
@@ -619,7 +623,8 @@ a { color: inherit; text-decoration: none; }
 @media (min-width: 981px) and (max-width: 1100px) {
   .main-nav { gap: 14px; }
   .desktop-event-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .desktop-event-card:last-child { grid-column: 1 / -1; }
+  /* Semua kartu tetap satu kolom grid; kartu terakhir tidak melebar sendiri. */
+  .desktop-event-card { min-width: 0; }
 }
 
 @media (min-width: 1600px) {
@@ -730,6 +735,7 @@ a { color: inherit; text-decoration: none; }
 .mobile-benefit-icon img { width: 55%; height: 55%; object-fit: contain; }
 .mobile-game-dot { display: grid; place-items: center; overflow: hidden; }
 .mobile-game-dot img { width: 58%; height: 58%; object-fit: contain; }
+.mobile-game-dot--custom img { width: 94%; height: 94%; object-fit: contain; }
 
 @media (max-width: 700px) {
   .mobile-account-button { width: 31px; height: 31px; }
@@ -740,6 +746,7 @@ a { color: inherit; text-decoration: none; }
   .feature-icon img { width: 58%; height: 58%; object-fit: contain; }
   .desktop-game-dot { display: grid; place-items: center; overflow: hidden; }
   .desktop-game-dot img { width: 58%; height: 58%; object-fit: contain; }
+  .desktop-game-dot--custom img { width: 94%; height: 94%; object-fit: contain; }
 }
 
 /* ===== User Login ===== */
@@ -3101,8 +3108,11 @@ a { color: inherit; text-decoration: none; }
   .user-personal-games { grid-template-columns:1fr; }
 }
 
-@media (min-width:701px) and (max-width:1100px) {
-  .user-personal-wrap { width:min(680px,calc(100% - 48px)); }
+@media (min-width:701px) and (max-width:1350px) {
+  /* Fluid tablet-to-desktop width: no sudden 1100/1101px shrink. */
+  .user-personal-wrap {
+    width: min(calc(100% - 48px), clamp(760px, calc(1300px - 40vw), 860px));
+  }
 }
 
 /* ===== Unified mobile typography baseline (reference: Reset Password) ===== */
@@ -3920,6 +3930,7 @@ a { color: inherit; text-decoration: none; }
 .user-success-details dt { color:#9ba7ba;font-size:14px;line-height:1.45; }
 .user-success-details dd { margin:0;color:#eef3ff;font-size:14px;line-height:1.45;text-align:right;font-weight:600; }
 .user-success-details dd.is-accent { color:#30bce9; }
+.user-success-game-category { display:block; margin-top:2px; color:#a2aec4; font-size:12px; font-weight:400; }
 .user-success-submit-time { margin-top:6px;padding-top:12px;border-top:1px solid #1e2a40; }
 .user-success-submit-time dd { color:#8f9db4; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:500; }
 
@@ -4348,6 +4359,10 @@ a { color: inherit; text-decoration: none; }
   background: #5c3d00;
   color: #ffb514;
 }
+.user-profile-status--rejected {
+  background: #5c1c25;
+  color: #ff5d68;
+}
 
 .user-profile-add-game {
   width: 100%;
@@ -4407,7 +4422,7 @@ a { color: inherit; text-decoration: none; }
 .user-profile-help > p span {
   font-weight: 400;
 }
-.user-profile-help > a {
+.user-profile-help > .user-profile-contact-link {
   width: max-content;
   min-height: 46px;
   margin: 20px auto 0;
@@ -4423,7 +4438,7 @@ a { color: inherit; text-decoration: none; }
   font-size: 18px;
   font-weight: 700;
 }
-.user-profile-help > a svg {
+.user-profile-help > .user-profile-contact-link svg {
   width: 20px;
   height: 20px;
 }
@@ -4606,13 +4621,13 @@ a { color: inherit; text-decoration: none; }
     width: 18px;
     height: 18px;
   }
-  .user-profile-help > a {
+  .user-profile-help > .user-profile-contact-link {
     min-height: 36px;
     margin-top: 16px;
     padding: 0 16px;
     font-size: 14px;
   }
-  .user-profile-help > a svg {
+  .user-profile-help > .user-profile-contact-link svg {
     width: 16px;
     height: 16px;
   }
@@ -4915,14 +4930,14 @@ a { color: inherit; text-decoration: none; }
     height: 16px;
   }
 
-  .user-profile-help > a {
+  .user-profile-help > .user-profile-contact-link {
     min-height: 32px;
     margin-top: 16px;
     padding: 0 14px;
     font-size: 13px;
   }
 
-  .user-profile-help > a svg {
+  .user-profile-help > .user-profile-contact-link svg {
     width: 15px;
     height: 15px;
   }
@@ -5180,4 +5195,511 @@ a { color: inherit; text-decoration: none; }
   height: 18px;
   object-fit: contain;
   flex: 0 0 auto;
+}
+
+/* Ridoooo Supabase Auth: six-digit email OTP, preserving the existing visual language. */
+.user-otp-inputs,
+.user-reset-otp-inputs {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  width: min(440px, 100%);
+  gap: 9px;
+}
+.user-otp-inputs input,
+.user-reset-otp-inputs input {
+  min-width: 0;
+  width: 100%;
+  height: 65px;
+  font-size: 24px;
+}
+@media (max-width: 700px) {
+  .user-otp-inputs,
+  .user-reset-otp-inputs {
+    width: 100%;
+    gap: 7px;
+  }
+  .user-otp-inputs input,
+  .user-reset-otp-inputs input {
+    height: 52px;
+    font-size: 21px;
+    border-radius: 10px;
+  }
+}
+
+/* Visible administrator decision notes on the student profile */
+.user-profile-admin-note {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 9px;
+  background: rgba(255,255,255,0.045);
+  overflow-wrap: anywhere;
+}
+.user-profile-admin-note strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #f1f5f9;
+  font-size: 12px;
+}
+.user-profile-admin-note p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.user-profile-reapply {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 9px;
+  color: #67e8f9;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+/* Prevent re-selecting divisions that already have an active application */
+.user-personal-games button:disabled {
+  opacity: .46;
+  cursor: not-allowed;
+  filter: grayscale(.55);
+}
+.user-personal-games button:disabled:hover {
+  transform: none;
+}
+.user-personal-game-status {
+  display: block;
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.user-personal-primary:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* TA responsive refinement: preserve existing desktop styling; fit real phone widths */
+.user-upload-verified.is-empty {
+  border-color: #2a3954;
+  background: #0a1323;
+}
+.user-upload-verified.is-empty p {
+  color: #aeb9cc;
+}
+.user-upload-change__icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+.user-upload-file-pill {
+  min-width: 0;
+  max-width: 100%;
+}
+.user-upload-file-pill span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.user-upload-dropzone > strong,
+.user-upload-dropzone > small,
+.user-upload-verified p {
+  text-align: center;
+}
+.user-personal-games button {
+  min-width: 0;
+}
+.user-personal-game-status {
+  margin-left: auto;
+  max-width: 52%;
+  overflow-wrap: anywhere;
+  text-align: right;
+  white-space: normal;
+}
+.user-personal-wrap,
+.user-upload-wrap {
+  box-sizing: border-box;
+}
+@media (max-width: 700px) {
+  .user-personal-page,
+  .user-upload-page,
+  .user-success-page,
+  .user-profile-page {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin-left: 0;
+    margin-right: 0;
+    box-sizing: border-box;
+  }
+  .user-personal-header,
+  .user-upload-header,
+  .user-success-header,
+  .user-profile-header {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    gap: 8px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .user-personal-heading,
+  .user-upload-heading,
+  .user-success-heading,
+  .user-profile-heading {
+    min-width: 0;
+    overflow: hidden;
+  }
+  .user-personal-heading strong,
+  .user-personal-heading span,
+  .user-upload-heading strong,
+  .user-upload-heading span,
+  .user-success-heading strong,
+  .user-success-heading span,
+  .user-profile-heading strong,
+  .user-profile-heading span {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .user-personal-back,
+  .user-personal-logo,
+  .user-upload-back,
+  .user-upload-logo {
+    width: 39px;
+    height: 39px;
+    box-sizing: border-box;
+  }
+  .user-personal-logo img,
+  .user-upload-logo img {
+    max-width: 100%;
+    max-height: 100%;
+  }
+  .user-personal-wrap,
+  .user-upload-wrap {
+    width: calc(100% - 32px);
+    max-width: 560px;
+  }
+  .user-personal-card,
+  .user-upload-card {
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .user-personal-games {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .user-personal-games button {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: center;
+    min-height: 52px;
+    padding: 10px 14px;
+    gap: 8px 10px;
+    white-space: normal;
+    text-align: left;
+  }
+  .user-personal-games button > span:nth-child(2) {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .user-personal-game-status {
+    flex: 0 1 auto;
+    max-width: 52%;
+    margin: 0 0 0 auto;
+    font-size: 11px;
+    line-height: 1.35;
+    text-align: right;
+    white-space: normal;
+  }
+  .user-personal-form,
+  .user-personal-grid,
+  .user-personal-grid--study,
+  .user-personal-group,
+  .user-upload-file-row,
+  .user-upload-card-head {
+    min-width: 0;
+  }
+  .user-personal-input,
+  .user-personal-select-wrap,
+  .user-personal-group textarea {
+    box-sizing: border-box;
+    width: 100%;
+  }
+  .user-upload-card-head h2 small {
+    overflow-wrap: anywhere;
+  }
+  .user-upload-verified,
+  .user-upload-dropzone {
+    min-width: 0;
+    box-sizing: border-box;
+    width: 100%;
+  }
+  .user-upload-file-row > strong {
+    flex-shrink: 0;
+  }
+  .user-upload-warning > img,
+  .user-upload-warning-icon {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    flex: 0 0 24px;
+  }
+  .user-upload-warning > div {
+    min-width: 0;
+  }
+  .user-upload-warning p,
+  .user-upload-card-head h2,
+  .user-upload-verified p {
+    overflow-wrap: anywhere;
+  }
+  .user-upload-change {
+    min-height: 44px;
+  }
+}
+@media (max-width: 420px) {
+  .user-personal-grid,
+  .user-personal-grid--study {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .user-upload-card-head {
+    gap: 8px;
+  }
+  .user-upload-card-head h2 small {
+    display: block;
+    margin: 4px 0 0;
+  }
+  .user-personal-card {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+@media (max-width: 360px) {
+  .user-personal-header,
+  .user-upload-header {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .user-upload-card {
+    padding: 16px;
+  }
+  .user-personal-game-status {
+    max-width: 48%;
+  }
+}
+
+/* Uniform KTM and Instagram upload surfaces: same design in both states */
+.user-upload-dropzone {
+  min-width: 0;
+  position: relative;
+  box-sizing: border-box;
+  transition: border-color .16s ease, background-color .16s ease;
+}
+.user-upload-dropzone.is-dragging,
+.user-upload-dropzone:focus-within {
+  border-color: #39d9ec;
+  background: #101f32;
+}
+.user-upload-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.user-upload-dropzone__control {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  text-align: center;
+}
+.user-upload-dropzone__control > strong {
+  margin-top: 16px;
+  color: #eef3ff;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.user-upload-dropzone__control > small {
+  margin-top: 4px;
+  color: #7f8da4;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.user-upload-dropzone__control .user-upload-circle {
+  flex: 0 0 auto;
+}
+.user-upload-dropzone__control .user-upload-circle img {
+  display: block;
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+.user-upload-dropzone .user-upload-file-block {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.user-upload-dropzone .user-upload-file-row {
+  min-width: 0;
+}
+.user-upload-dropzone .user-upload-file-row > strong {
+  white-space: nowrap;
+}
+.user-upload-dropzone .user-upload-meta {
+  align-items: center;
+  flex-wrap: wrap;
+}
+.user-upload-file-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+.user-upload-file-actions > label,
+.user-upload-file-actions > button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.user-upload-file-actions > label {
+  padding: 0 12px;
+  border: 1px solid #2a3954;
+  background: #141e30;
+  color: #c1cce0;
+}
+.user-upload-file-actions > label:hover,
+.user-upload-file-actions > label:focus-visible {
+  border-color: #16bdd4;
+  color: #eef3ff;
+}
+.user-upload-file-actions > button {
+  padding: 0 10px;
+  border: 1px solid #4a3143;
+  background: transparent;
+  color: #ff8294;
+}
+.user-upload-file-actions > button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+@media (max-width: 700px) {
+  .user-upload-dropzone__control > strong {
+    margin-top: 14px;
+    font-size: 14px;
+  }
+  .user-upload-dropzone__control > small {
+    font-size: 12px;
+  }
+  .user-upload-dropzone__control .user-upload-circle img {
+    width: 27px;
+    height: 27px;
+  }
+  .user-upload-file-actions > label,
+  .user-upload-file-actions > button {
+    min-height: 44px;
+  }
+}
+@media (max-width: 430px) {
+  .user-upload-dropzone .user-upload-file-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px 10px;
+  }
+  .user-upload-dropzone .user-upload-file-row > strong {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .user-upload-dropzone .user-upload-meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .user-upload-file-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+  .user-upload-file-actions > label,
+  .user-upload-file-actions > button {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+/* Responsive consistency: do not confine auth screens to an artificial 390px canvas.
+   The inner cards retain their intended max-width and original visual identity. */
+@media (max-width: 700px) {
+  .user-login-page,
+  .user-register-page,
+  .user-otp-page,
+  .user-reset-page {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin-inline: 0;
+    box-sizing: border-box;
+  }
+  .user-login-header,
+  .user-register-header,
+  .user-otp-header,
+  .user-reset-header {
+    width: 100%;
+    box-sizing: border-box;
+    grid-template-columns: 40px minmax(0,1fr) 40px;
+    gap: 8px;
+    padding-inline: 16px;
+  }
+  .user-login-heading,
+  .user-register-heading,
+  .user-otp-heading,
+  .user-reset-heading {
+    min-width: 0;
+  }
+  .user-login-card,
+  .user-register-card,
+  .user-otp-card,
+  .user-reset-card {
+    box-sizing: border-box;
+    min-width: 0;
+  }
+}
+
+/* Let auth cards grow naturally on larger phones while retaining
+   the established 358px card at 390px viewport and a sensible tablet cap. */
+@media (max-width: 700px) {
+  .user-login-card,
+  .user-register-card,
+  .user-otp-card {
+    width: calc(100% - 32px);
+    max-width: 560px;
+  }
+  .user-reset-card {
+    max-width: 560px;
+  }
+}
+
+/* Match document-upload width to personal form on tablet; desktop remains 760px. */
+@media (min-width: 701px) and (max-width: 1350px) {
+  .user-upload-wrap {
+    width: min(calc(100% - 48px), clamp(760px, calc(1300px - 40vw), 860px));
+  }
 }

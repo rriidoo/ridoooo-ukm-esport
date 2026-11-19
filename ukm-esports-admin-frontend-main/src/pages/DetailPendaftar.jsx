@@ -1,12 +1,15 @@
+import AdminSidebarProfile from '../components/AdminSidebarProfile';
+import { useState } from 'react';
+import { supabase } from '../lib/supabase';
+import PrivateDocumentPreview from '../components/PrivateDocumentPreview';
 import {
   ArrowLeft,
-  Bell,
   Check,
   FileText,
   FolderOpen,
   Gamepad2,
   Grid2X2,
-  LogOut,
+
   MessageSquareQuote,
   Table2,
   Eye,
@@ -25,7 +28,30 @@ import gameIcon from '../assets/ui-icons/Icon-4.png';
 import motivationIcon from '../assets/ui-icons/Icon-6.png';
 import documentIcon from '../assets/ui-icons/Icon-10.png';
 
-export default function DetailPendaftar({ applicant, onBack, onLogout, onNavigate }) {
+export default function DetailPendaftar({ adminUser, applicant, onBack, onLogout, onNavigate, onReviewed }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [reviewNote, setReviewNote] = useState(applicant?.review_note || '');
+  const review = async (decision) => {
+    if (!data.id || data.status !== 'Menunggu Verifikasi') return;
+    if (!window.confirm(decision === 'accepted' ? 'Terima pendaftar ini?' : 'Tolak pendaftar ini?')) return;
+    setBusy(true); setError('');
+    const { error: reviewError } = await supabase.rpc('ridoooo_review_application', {
+      p_application_id: data.id, p_decision: decision, p_note: reviewNote || null
+    });
+    setBusy(false);
+    if (reviewError) { setError(reviewError.message); return; }
+    await onReviewed?.();
+    onBack?.();
+  };
+  const openDocument = async (path, download = false) => {
+    if (!path) { setError('Berkas tidak tersedia.'); return; }
+    setError('');
+    const { data: signed, error: signedError } = await supabase.storage
+      .from('ridoooo-application-documents').createSignedUrl(path, 60, { download });
+    if (signedError || !signed?.signedUrl) { setError(signedError?.message || 'Gagal mengakses berkas.'); return; }
+    window.open(signed.signedUrl, '_blank', 'noopener,noreferrer');
+  };
   const data = applicant || {
     initials: 'AB',
     name: 'Arya Bramanto',
@@ -39,6 +65,7 @@ export default function DetailPendaftar({ applicant, onBack, onLogout, onNavigat
     tone: 'waiting',
   };
 
+  if (!applicant) return <main style={{ padding: 40 }}><p>Pilih pendaftar dari daftar terlebih dahulu.</p><button onClick={onBack}>Kembali ke Pendaftar</button></main>;
   return (
     <main className="detail-pendaftar-page">
       <aside className="beranda-sidebar">
@@ -73,18 +100,7 @@ export default function DetailPendaftar({ applicant, onBack, onLogout, onNavigat
           </button>
         </nav>
 
-        <div className="beranda-sidebar__bottom">
-          <div className="beranda-admin">
-            <div className="beranda-admin__avatar">RP</div>
-            <div className="beranda-admin__copy">
-              <strong>Raka Pratan</strong>
-              <span>SUPER ADMIN</span>
-            </div>
-            <button type="button" className="beranda-admin__logout" onClick={onLogout} aria-label="Logout">
-              <LogOut size={15} strokeWidth={1.8} />
-            </button>
-          </div>
-        </div>
+        <AdminSidebarProfile adminUser={adminUser} onLogout={onLogout} />
       </aside>
 
       <section className="detail-pendaftar-main">
@@ -93,12 +109,8 @@ export default function DetailPendaftar({ applicant, onBack, onLogout, onNavigat
           <div className="beranda-header__actions">
             <div className="beranda-period">
               <span className="beranda-period__dot" />
-              <span>Periode Aktif: Registrasi 2024/2025</span>
+              <span>Data Pendaftaran UKM Esports</span>
             </div>
-            <button type="button" className="beranda-notification" aria-label="Notifikasi">
-              <Bell size={16} strokeWidth={1.8} />
-              <span className="beranda-notification__dot" />
-            </button>
           </div>
         </header>
 
@@ -112,9 +124,9 @@ export default function DetailPendaftar({ applicant, onBack, onLogout, onNavigat
             <div>
               <div className="detail-pendaftar-hero__title-row">
                 <h2>Detail Pendaftar</h2>
-                <span className="detail-pendaftar-hero__id">#{data.nim}</span>
+                <span className="detail-pendaftar-hero__id">#{data.id?.slice(0, 8).toUpperCase()}</span>
               </div>
-              <p>{data.name} • {data.email}</p>
+              <p>{data.name}</p>
             </div>
             <span className={`detail-pendaftar-status detail-pendaftar-status--${data.tone}`}>
               <i />
@@ -150,7 +162,7 @@ export default function DetailPendaftar({ applicant, onBack, onLogout, onNavigat
               </div>
               <div className="detail-pendaftar-info">
                 <span>No. WhatsApp</span>
-                <strong>0812 3456 7890</strong>
+                <strong>{data.whatsapp || '-'}</strong>
               </div>
             </div>
           </section>
@@ -167,7 +179,7 @@ export default function DetailPendaftar({ applicant, onBack, onLogout, onNavigat
               </div>
               <div className="detail-pendaftar-info">
                 <span>Nickname / ID Game</span>
-                <strong>Player#{data.nim.slice(-4)}</strong>
+                <strong>{data.game_nickname || '-'}</strong>
               </div>
             </div>
           </section>
@@ -178,8 +190,7 @@ export default function DetailPendaftar({ applicant, onBack, onLogout, onNavigat
               <h3>Motivasi Bergabung</h3>
             </div>
             <div className="detail-pendaftar-motivation">
-              Saya ingin mengembangkan kemampuan bermain secara kompetitif, menambah pengalaman dalam tim,
-              serta berkontribusi dalam kegiatan dan turnamen UKM Esports Tel-U.
+              {data.motivation || 'Tidak ada motivasi tertulis.'}
             </div>
           </section>
 
@@ -194,56 +205,44 @@ export default function DetailPendaftar({ applicant, onBack, onLogout, onNavigat
                 <div className="detail-document__head">
                   <div>
                     <h4>Kartu Tanda Mahasiswa (KTM)</h4>
-                    <p>ktm_{data.nim}.jpg</p>
+                    <p>{data.ktm_path?.split('/').pop() || 'KTM belum tersedia'}</p>
                   </div>
-                  <span>1.8 MB</span>
+                  <span>Berkas privat</span>
                 </div>
                 <div className="detail-document__preview detail-document__preview--ktm">
-                  <div className="detail-document__ktm-mark">TEL-U</div>
-                  <div>
-                    <strong>{data.name}</strong>
-                    <span>{data.nim}</span>
-                    <span>{data.study}</span>
-                  </div>
+                  <PrivateDocumentPreview path={data.ktm_path} label="KTM" />
                 </div>
                 <div className="detail-document__view-actions">
-                  <button type="button"><Eye size={13} strokeWidth={1.9} /> Lihat Penuh</button>
-                  <button type="button"><Download size={13} strokeWidth={1.9} /> Download</button>
+                  <button type="button" onClick={() => openDocument(data.ktm_path)}><Eye size={13} strokeWidth={1.9} /> Lihat Penuh</button>
+                  <button type="button" onClick={() => openDocument(data.ktm_path, true)}><Download size={13} strokeWidth={1.9} /> Download</button>
                 </div>
-                <div className="detail-document__actions">
-                  <button type="button"><Check size={13} strokeWidth={2} /> Valid</button>
-                  <button type="button"><X size={13} strokeWidth={2} /> Tidak Valid</button>
-                </div>
+                <div className="detail-document__actions">Periksa berkas KTM secara manual sebelum mengambil keputusan.</div>
               </article>
 
               <article className="detail-document">
                 <div className="detail-document__head">
                   <div>
                     <h4>Bukti Follow Instagram</h4>
-                    <p>bukti_follow_{data.nim}.jpg</p>
+                    <p>{data.instagram_path?.split('/').pop() || 'Bukti belum tersedia'}</p>
                   </div>
-                  <span>1.2 MB</span>
+                  <span>Berkas privat</span>
                 </div>
                 <div className="detail-document__preview detail-document__preview--instagram">
-                  <div className="detail-document__screenbar" />
-                  <div className="detail-document__screenbody">
-                    <span />
-                    <span />
-                    <span />
-                  </div>
+                  <PrivateDocumentPreview path={data.instagram_path} label="Bukti Follow Instagram" />
                 </div>
                 <div className="detail-document__view-actions">
-                  <button type="button"><Eye size={13} strokeWidth={1.9} /> Lihat Penuh</button>
-                  <button type="button"><Download size={13} strokeWidth={1.9} /> Download</button>
+                  <button type="button" onClick={() => openDocument(data.instagram_path)}><Eye size={13} strokeWidth={1.9} /> Lihat Penuh</button>
+                  <button type="button" onClick={() => openDocument(data.instagram_path, true)}><Download size={13} strokeWidth={1.9} /> Download</button>
                 </div>
-                <div className="detail-document__actions">
-                  <button type="button"><Check size={13} strokeWidth={2} /> Valid</button>
-                  <button type="button"><X size={13} strokeWidth={2} /> Tidak Valid</button>
-                </div>
+                <div className="detail-document__actions">Periksa bukti Instagram secara manual sebelum mengambil keputusan.</div>
               </article>
             </div>
           </section>
 
+          {error && <p role="alert" style={{ color: '#ff7777', marginBottom: 12 }}>{error}</p>}
+          <label className="detail-pendaftar-note">{data.status === 'Menunggu Verifikasi' ? 'Catatan keputusan (opsional)' : 'Catatan keputusan'}
+            <textarea value={reviewNote} onChange={e => setReviewNote(e.target.value)} disabled={data.status !== 'Menunggu Verifikasi'} maxLength={500} placeholder={data.status === 'Menunggu Verifikasi' ? 'Alasan penolakan atau catatan verifikasi' : 'Tidak ada catatan keputusan'} />
+          </label>
           <section className="detail-pendaftar-review">
             <div>
               <span>Status Pendaftaran:</span>
@@ -253,8 +252,8 @@ export default function DetailPendaftar({ applicant, onBack, onLogout, onNavigat
               </strong>
             </div>
             <div className="detail-pendaftar-review__actions">
-              <button type="button" className="detail-pendaftar-reject">Tolak Pendaftar</button>
-              <button type="button" className="detail-pendaftar-accept">Terima Pendaftar</button>
+              <button type="button" className="detail-pendaftar-reject" disabled={busy || data.status !== 'Menunggu Verifikasi'} onClick={() => review('rejected')}>Tolak Pendaftar</button>
+              <button type="button" className="detail-pendaftar-accept" disabled={busy || data.status !== 'Menunggu Verifikasi'} onClick={() => review('accepted')}>{busy ? 'Memproses...' : 'Terima Pendaftar'}</button>
             </div>
           </section>
         </div>

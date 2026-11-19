@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react';
-import { Bell, FileText, Home, LogOut, Save, Table2, Trophy, Gamepad2 } from 'lucide-react';
+import AdminSidebarProfile from '../components/AdminSidebarProfile';
+import { useEffect, useMemo, useState } from 'react';
+import { fetchHomeContent, saveHomeContentSection } from '../lib/homeContent';
+import { FileText, Home, Save, Table2, Trophy, Gamepad2 } from 'lucide-react';
 import logo from '../assets/logo-figma.png';
 import dashboardIcon from '../assets/ui-icons/Icon.png';
 import pendaftarIcon from '../assets/ui-icons/Icon-3.png';
@@ -23,6 +25,15 @@ const iconOptions = [
   { id: 'esports', label: 'Esports', selectedLabel: 'Esports', icon: esportsIcon },
   { id: 'official', label: 'Resmi', selectedLabel: 'Resmi', icon: officialIcon },
 ];
+
+const listIconsById = {
+  document: listDocumentIcon,
+  progress: listProgressIcon,
+  certificate: listCertificateIcon,
+  roster: rosterIcon,
+  esports: esportsIcon,
+  official: officialIcon,
+};
 
 const initialPillars = [
   {
@@ -51,11 +62,28 @@ const initialPillars = [
   },
 ];
 
-export default function EditKontenBerandaKeunggulan({ onLogout, onNavigate }) {
+export default function EditKontenBerandaKeunggulan({ adminUser, onLogout, onNavigate }) {
   const [pillars, setPillars] = useState(initialPillars);
   const [selectedId, setSelectedId] = useState(1);
   const selected = useMemo(() => pillars.find((item) => item.id === selectedId) || pillars[0], [pillars, selectedId]);
   const [draft, setDraft] = useState(() => ({ ...initialPillars[0] }));
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState('');
+  useEffect(() => {
+    let active = true;
+    fetchHomeContent().then((content) => {
+      if (!active) return;
+      const items = content.advantages.map((item) => ({
+        ...item, icon: listIconsById[item.iconId] || listDocumentIcon,
+      }));
+      if (items.length) {
+        setPillars(items);
+        setSelectedId(items[0].id);
+        setDraft({ ...items[0] });
+      }
+    }).catch(() => { if (active) setFeedback('Konten belum tersambung. Jalankan migration 005 di Supabase.'); });
+    return () => { active = false; };
+  }, []);
 
   function selectPillar(item) {
     setSelectedId(item.id);
@@ -66,8 +94,32 @@ export default function EditKontenBerandaKeunggulan({ onLogout, onNavigate }) {
     setDraft({ ...selected });
   }
 
-  function saveDraft() {
-    setPillars((items) => items.map((item) => (item.id === selectedId ? { ...item, ...draft } : item)));
+  async function saveDraft() {
+    if (saving) return;
+    if (!draft.title.trim() || !draft.description.trim()) {
+      setFeedback('Judul dan deskripsi tidak boleh kosong.');
+      return;
+    }
+    if (draft.title.length > 100 || draft.description.length > 300) {
+      setFeedback('Judul maksimal 100 karakter dan deskripsi maksimal 300 karakter.');
+      return;
+    }
+    setSaving(true);
+    setFeedback('');
+    const next = pillars.map((item) => (
+      item.id === selectedId ? { ...item, ...draft, title: draft.title.trim(), description: draft.description.trim() } : item
+    ));
+    try {
+      await saveHomeContentSection('home_advantages', {
+        items: next.map(({ id, iconId, title, description, active }) => ({ id, iconId, title, description, active })),
+      });
+      setPillars(next);
+      setFeedback('Keunggulan berhasil disimpan dan akan tampil pada website User.');
+    } catch (error) {
+      setFeedback('Gagal menyimpan keunggulan: ' + (error.message || 'Periksa SQL 005.'));
+    } finally {
+      setSaving(false);
+    }
   }
 
   const selectedIcon = iconOptions.find((item) => item.id === draft.iconId) || iconOptions[0];
@@ -106,18 +158,7 @@ export default function EditKontenBerandaKeunggulan({ onLogout, onNavigate }) {
           </button>
         </nav>
 
-        <div className="beranda-sidebar__bottom">
-          <div className="beranda-admin">
-            <div className="beranda-admin__avatar">RP</div>
-            <div className="beranda-admin__copy">
-              <strong>Raka Pratan</strong>
-              <span>SUPER ADMIN</span>
-            </div>
-            <button type="button" className="beranda-admin__logout" onClick={onLogout} aria-label="Logout">
-              <LogOut size={15} strokeWidth={1.8} />
-            </button>
-          </div>
-        </div>
+        <AdminSidebarProfile adminUser={adminUser} onLogout={onLogout} />
       </aside>
 
       <section className="keunggulan-main">
@@ -126,12 +167,8 @@ export default function EditKontenBerandaKeunggulan({ onLogout, onNavigate }) {
           <div className="beranda-header__actions">
             <div className="beranda-period">
               <span className="beranda-period__dot" />
-              <span>Periode Aktif: Registrasi 2024/2025</span>
+              <span>Data Pendaftaran UKM Esports</span>
             </div>
-            <button type="button" className="beranda-notification" aria-label="Notifikasi">
-              <Bell size={16} strokeWidth={1.8} />
-              <span className="beranda-notification__dot" />
-            </button>
           </div>
         </header>
 
@@ -152,6 +189,7 @@ export default function EditKontenBerandaKeunggulan({ onLogout, onNavigate }) {
           </div>
 
           <h2 className="keunggulan-page-title">Kelola Keunggulan Komunitas</h2>
+          {feedback && <p role="status" aria-live="polite" style={{ marginBottom: 16, color: '#e4efff' }}>{feedback}</p>}
 
           <div className="keunggulan-layout">
             <section className="keunggulan-list-card">
@@ -170,7 +208,7 @@ export default function EditKontenBerandaKeunggulan({ onLogout, onNavigate }) {
                       className={editing ? 'keunggulan-item keunggulan-item--active' : 'keunggulan-item'}
                       onClick={() => selectPillar(item)}
                     >
-                      <img src={item.icon} alt="" aria-hidden="true" />
+                      <img src={listIconsById[editing ? draft.iconId : item.iconId] || listDocumentIcon} alt="" aria-hidden="true" />
                       <div className="keunggulan-item__copy">
                         <div className="keunggulan-item__title-row">
                           <strong>{item.title}</strong>
@@ -195,7 +233,7 @@ export default function EditKontenBerandaKeunggulan({ onLogout, onNavigate }) {
                 </div>
                 <div>
                   <h3>Edit Keunggulan Komunitas</h3>
-                  <p>Perubahan langsung disinkronkan ke preview publik.</p>
+                  <p>Tekan Simpan untuk menerbitkan perubahan ke website User.</p>
                 </div>
                 <span className="keunggulan-editing-badge">SEDANG DISUNTING</span>
               </div>
@@ -224,7 +262,11 @@ export default function EditKontenBerandaKeunggulan({ onLogout, onNavigate }) {
                         key={option.id}
                         type="button"
                         className={draft.iconId === option.id ? 'keunggulan-icon-option keunggulan-icon-option--active' : 'keunggulan-icon-option'}
-                        onClick={() => setDraft((current) => ({ ...current, iconId: option.id }))}
+                        onClick={() => setDraft((current) => ({
+                          ...current,
+                          iconId: option.id,
+                          icon: listIconsById[option.id],
+                        }))}
                       >
                         <img src={option.icon} alt="" aria-hidden="true" />
                         <span>{option.label}</span>
@@ -236,10 +278,10 @@ export default function EditKontenBerandaKeunggulan({ onLogout, onNavigate }) {
                 <label className="keunggulan-field">
                   <span className="keunggulan-field__label">
                     <b>Deskripsi Singkat *</b>
-                    <small>{draft.description.length} / 150 Karakter</small>
+                    <small>{draft.description.length} / 300 Karakter</small>
                   </span>
                   <textarea
-                    maxLength={150}
+                    maxLength={300}
                     value={draft.description}
                     onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
                   />
@@ -261,9 +303,9 @@ export default function EditKontenBerandaKeunggulan({ onLogout, onNavigate }) {
 
               <div className="keunggulan-form-footer">
                 <button type="button" className="keunggulan-reset-button" onClick={resetDraft}>Batal / Reset</button>
-                <button type="button" className="keunggulan-save-button" onClick={saveDraft}>
+                <button type="button" className="keunggulan-save-button" onClick={saveDraft} disabled={saving}>
                   <Save size={13} strokeWidth={2} />
-                  <span>Simpan Perubahan Keunggulan</span>
+                  <span>{saving ? 'Menyimpan...' : 'Simpan Perubahan Keunggulan'}</span>
                 </button>
               </div>
             </section>

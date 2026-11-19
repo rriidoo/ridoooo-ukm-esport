@@ -1,10 +1,10 @@
+import AdminSidebarProfile from '../components/AdminSidebarProfile';
 import { useMemo, useState } from 'react';
 import {
-  Bell,
   FileText,
   Gamepad2,
   Grid2X2,
-  LogOut,
+
   Search,
   Table2,
   UserRoundPlus,
@@ -29,7 +29,7 @@ const members = [
   { initials: 'DW', name: 'Dimas Wahyu', email: 'dimas.w@ittelkom-pwt.ac.id', nim: '23101019', study: 'S1 Informatika', game: 'eFootball', cohort: '2023' },
 ];
 
-export default function Anggota({ onLogout, onNavigate, onDetail }) {
+export default function Anggota({ adminUser, onLogout, onNavigate, onDetail, members = [] }) {
   const [query, setQuery] = useState('');
   const [game, setGame] = useState('');
   const [cohort, setCohort] = useState('');
@@ -38,12 +38,14 @@ export default function Anggota({ onLogout, onNavigate, onDetail }) {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return members.filter((item) => {
-      const matchesQuery = !q || item.name.toLowerCase().includes(q) || item.nim.toLowerCase().includes(q);
+      const matchesQuery = !q || item.name.toLowerCase().includes(q) || item.email.toLowerCase().includes(q) || (item.nim || '').toLowerCase().includes(q);
       const matchesGame = !game || item.game === game;
       const matchesCohort = !cohort || item.cohort === cohort;
       return matchesQuery && matchesGame && matchesCohort;
     });
-  }, [query, game, cohort]);
+  }, [members, query, game, cohort]);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / 10));
+  const visibleMembers = filtered.slice((Math.min(page, pageCount) - 1) * 10, Math.min(page, pageCount) * 10);
 
   return (
     <main className="anggota-page">
@@ -79,18 +81,7 @@ export default function Anggota({ onLogout, onNavigate, onDetail }) {
           </button>
         </nav>
 
-        <div className="beranda-sidebar__bottom">
-          <div className="beranda-admin">
-            <div className="beranda-admin__avatar">RP</div>
-            <div className="beranda-admin__copy">
-              <strong>Raka Pratan</strong>
-              <span>SUPER ADMIN</span>
-            </div>
-            <button type="button" className="beranda-admin__logout" onClick={onLogout} aria-label="Logout">
-              <LogOut size={15} strokeWidth={1.8} />
-            </button>
-          </div>
-        </div>
+        <AdminSidebarProfile adminUser={adminUser} onLogout={onLogout} />
       </aside>
 
       <section className="anggota-main">
@@ -99,12 +90,8 @@ export default function Anggota({ onLogout, onNavigate, onDetail }) {
           <div className="beranda-header__actions">
             <div className="beranda-period">
               <span className="beranda-period__dot" />
-              <span>Periode Aktif: Registrasi 2024/2025</span>
+              <span>Data Pendaftaran UKM Esports</span>
             </div>
-            <button type="button" className="beranda-notification" aria-label="Notifikasi">
-              <Bell size={16} strokeWidth={1.8} />
-              <span className="beranda-notification__dot" />
-            </button>
           </div>
         </header>
 
@@ -114,7 +101,7 @@ export default function Anggota({ onLogout, onNavigate, onDetail }) {
               <div>
                 <p>TOTAL ANGGOTA</p>
                 <div className="anggota-stat__value">
-                  <strong>580</strong>
+                  <strong>{new Set(members.map(m => m.user_id)).size}</strong>
                   <span>Mahasiswa</span>
                 </div>
                 <small><i /> Aktif di seluruh Program/Game</small>
@@ -130,10 +117,24 @@ export default function Anggota({ onLogout, onNavigate, onDetail }) {
                 <img className="anggota-stat__asset anggota-stat__asset--game" src={anggotaGameIcon} alt="" aria-hidden="true" />
               </div>
               <div className="anggota-game-grid">
-                <div><span>Valorant</span><b className="anggota-number anggota-number--blue">225</b></div>
-                <div><span>Mobile Legends</span><b className="anggota-number anggota-number--red">200</b></div>
-                <div><span>PUBG M</span><b className="anggota-number anggota-number--yellow">120</b></div>
-                <div><span>eFootball</span><b className="anggota-number anggota-number--cyan">80</b></div>
+                {['Valorant', 'Mobile Legends', 'PUBG Mobile', 'eFootball',
+                  ...[...new Set(members.map((member) => member.game))]
+                    .filter((name) => name && !['Valorant', 'Mobile Legends', 'PUBG Mobile', 'eFootball'].includes(name))
+                    .sort((a, b) => a.localeCompare(b)),
+                ].map((name) => {
+                  const style = {
+                    'Valorant': 'blue',
+                    'Mobile Legends': 'red',
+                    'PUBG Mobile': 'yellow',
+                    'eFootball': 'cyan',
+                  }[name] || 'blue';
+                  return (
+                    <div key={name}>
+                      <span>{name === 'PUBG Mobile' ? 'PUBG M' : name}</span>
+                      <b className={'anggota-number anggota-number--' + style}>{members.filter((member) => member.game === name).length}</b>
+                    </div>
+                  );
+                })}
               </div>
             </article>
 
@@ -143,10 +144,7 @@ export default function Anggota({ onLogout, onNavigate, onDetail }) {
                 <img className="anggota-stat__asset anggota-stat__asset--cohort" src={anggotaCohortIcon} alt="" aria-hidden="true" />
               </div>
               <div className="anggota-cohort-grid">
-                <div><span>2021</span><b>80</b></div>
-                <div><span>2022</span><b>120</b></div>
-                <div><span>2023</span><b>175</b></div>
-                <div><span>2024</span><b>205</b></div>
+                {[...new Set(members.map(m => m.cohort))].sort().map(year => <div key={year}><span>{year}</span><b>{new Set(members.filter(m => m.cohort === year).map(m => m.user_id)).size}</b></div>)}
               </div>
             </article>
           </section>
@@ -161,24 +159,20 @@ export default function Anggota({ onLogout, onNavigate, onDetail }) {
                   setQuery(event.target.value);
                   setPage(1);
                 }}
-                placeholder="Cari nama atau NIM..."
+                placeholder="Cari nama, NIM, atau email..."
               />
             </label>
 
             <select value={game} onChange={(event) => { setGame(event.target.value); setPage(1); }}>
               <option value="">Semua Game</option>
-              <option value="Valorant">Valorant</option>
-              <option value="Mobile Legends">Mobile Legends</option>
-              <option value="PUBG Mobile">PUBG Mobile</option>
-              <option value="eFootball">eFootball</option>
+              {[...new Set(members.map((item) => item.game))].filter(Boolean).sort((a, b) => a.localeCompare(b)).map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
             </select>
 
             <select value={cohort} onChange={(event) => { setCohort(event.target.value); setPage(1); }}>
               <option value="">Semua Angkatan</option>
-              <option value="2024">2024</option>
-              <option value="2023">2023</option>
-              <option value="2022">2022</option>
-              <option value="2021">2021</option>
+              {[...new Set(members.map(m => m.cohort))].sort().reverse().map(y => <option key={y} value={y}>{y}</option>)}
             </select>
 
             <button type="button" className="anggota-reset" onClick={() => {
@@ -205,27 +199,27 @@ export default function Anggota({ onLogout, onNavigate, onDetail }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((item) => (
-                    <tr key={item.nim}>
-                      <td>
+                  {visibleMembers.map((item) => (
+                    <tr key={item.id}>
+                      <td data-label="Mahasiswa">
                         <div className="anggota-person">
                           <span className="anggota-person__avatar">{item.initials}</span>
                           <div>
-                            <strong>{item.name}</strong>
-                            <span>{item.email}</span>
+                            <strong title={item.name}>{item.name}</strong>
+                            <span title={item.email}>{item.email}</span>
                           </div>
                         </div>
                       </td>
-                      <td>{item.nim}</td>
-                      <td>{item.study}</td>
-                      <td>
+                      <td data-label="NIM" className="admin-nim" title={item.nim || "NIM belum tersedia"}>{item.nim}</td>
+                      <td data-label="Program Studi">{item.study}</td>
+                      <td data-label="Game">
                         <span className={`pendaftar-game pendaftar-game--${item.game.toLowerCase().replaceAll(' ', '-')}`}>
                           <i />
                           {item.game}
                         </span>
                       </td>
-                      <td>{item.cohort}</td>
-                      <td>
+                      <td data-label="Angkatan">{item.cohort}</td>
+                      <td data-label="Aksi">
                         <button type="button" className="anggota-detail" onClick={() => onDetail?.(item)}>
                           Detail <span>›</span>
                         </button>
@@ -242,22 +236,22 @@ export default function Anggota({ onLogout, onNavigate, onDetail }) {
 
             <footer className="anggota-pagination">
               <p>
-                Menampilkan <strong>{filtered.length ? '1–' + filtered.length : '0'}</strong> dari <strong>580</strong> anggota
+                Menampilkan <strong>{filtered.length ? ((Math.min(page,pageCount)-1)*10+1) + '–' + Math.min(Math.min(page,pageCount)*10, filtered.length) : '0'}</strong> dari <strong>{filtered.length}</strong> anggota
               </p>
               <div className="pendaftar-pagination__controls">
                 <button type="button" className="pendaftar-page-button pendaftar-page-button--wide" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
                   ‹ Sebelumnya
                 </button>
-                {[1, 2, 3].map((n) => (
+                {Array.from({ length: Math.min(3, pageCount) }, (_, i) => i + 1).map((n) => (
                   <button key={n} type="button" className={page === n ? 'pendaftar-page-button pendaftar-page-button--active' : 'pendaftar-page-button'} onClick={() => setPage(n)}>
                     {n}
                   </button>
                 ))}
-                <span className="pendaftar-pagination__ellipsis">...</span>
-                <button type="button" className={page === 58 ? 'pendaftar-page-button pendaftar-page-button--active' : 'pendaftar-page-button'} onClick={() => setPage(58)}>
-                  58
-                </button>
-                <button type="button" className="pendaftar-page-button pendaftar-page-button--wide" disabled={page === 58} onClick={() => setPage((current) => Math.min(58, current + 1))}>
+                {pageCount > 3 && <>
+                  <span className="pendaftar-pagination__ellipsis">...</span>
+                  <button type="button" className={page === pageCount ? 'pendaftar-page-button pendaftar-page-button--active' : 'pendaftar-page-button'} onClick={() => setPage(pageCount)}>{pageCount}</button>
+                </>}
+                <button type="button" className="pendaftar-page-button pendaftar-page-button--wide" disabled={page >= pageCount} onClick={() => setPage((current) => Math.min(pageCount, current + 1))}>
                   Berikutnya ›
                 </button>
               </div>

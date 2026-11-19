@@ -537,6 +537,10 @@ button {
   backdrop-filter: blur(2px);
 }
 
+.reset-card--error {
+  height: 510px;
+}
+
 .reset-card::before {
   content: "";
   position: absolute;
@@ -737,6 +741,10 @@ button {
     padding: 36px 24px;
   }
 
+  .reset-card--error {
+    height: auto;
+  }
+
   .reset-card__heading p br {
     display: none;
   }
@@ -848,6 +856,10 @@ button {
     0 8px 10px -6px rgba(0, 0, 0, 0.1);
 }
 
+.otp-card--error {
+  height: 525px;
+}
+
 .otp-card::before {
   content: "";
   position: absolute;
@@ -906,15 +918,18 @@ button {
 }
 
 .otp-inputs {
-  display: flex;
-  justify-content: center;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
   width: 100%;
+  max-width: 420px;
+  margin-inline: auto;
   padding-bottom: 24px;
 }
 
 .otp-inputs input {
-  width: 64px;
+  width: 100%;
+  min-width: 0;
   height: 64px;
   padding: 0;
   border: 0;
@@ -1042,6 +1057,14 @@ button {
   box-shadow:
     0 20px 25px -5px rgba(0, 0, 0, 0.1),
     0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.new-password-card--error {
+  height: 555px;
+}
+
+.new-password-card--error .new-password-footer-action {
+  top: 466px;
 }
 
 .new-password-card__heading {
@@ -1240,6 +1263,10 @@ button {
     margin-top: 42px;
   }
 
+  .otp-card--error {
+    height: auto;
+  }
+
   .otp-card__header,
   .otp-form {
     position: relative;
@@ -1260,12 +1287,12 @@ button {
   }
 
   .otp-inputs {
-    gap: 10px;
+    gap: 8px;
   }
 
   .otp-inputs input {
-    width: min(18vw, 64px);
-    height: min(18vw, 64px);
+    width: 100%;
+    height: clamp(38px, 12vw, 64px);
   }
 
   .new-password-card {
@@ -1274,6 +1301,14 @@ button {
     min-height: 491px;
     margin-top: 42px;
     padding: 48px 24px 34px;
+  }
+
+  .new-password-card--error {
+    height: auto;
+  }
+
+  .new-password-card--error .new-password-footer-action {
+    top: auto;
   }
 
   .new-password-card__heading,
@@ -2193,9 +2228,38 @@ button {
   padding: 32px;
 }
 
+.beranda-data-alert {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  border: 1px solid rgba(227, 27, 45, .35);
+  border-radius: 8px;
+  background: rgba(227, 27, 45, .08);
+  color: #f1a6b0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.beranda-data-alert button {
+  margin-left: auto;
+  border: 1px solid #a84655;
+  border-radius: 6px;
+  background: transparent;
+  padding: 5px 10px;
+  color: #f1a6b0;
+  font: 600 12px Inter, sans-serif;
+  cursor: pointer;
+}
+.beranda-data-alert button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
 .beranda-summary {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 24px;
 }
 
@@ -2329,6 +2393,43 @@ button {
   font-size: 12px;
   font-weight: 400;
   line-height: 14px;
+}
+
+.beranda-last-update {
+  display: block;
+  margin-top: 5px;
+  color: #63728a;
+  font-size: 11px;
+  line-height: 15px;
+}
+.beranda-table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.beranda-reload {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: #a9b4c7;
+  font: 600 12px Inter, sans-serif;
+  cursor: pointer;
+}
+.beranda-reload:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+.beranda-table td.beranda-empty-row {
+  width: 100%;
+  padding: 18px 24px;
+  color: #8794a9;
+  text-align: center;
+  white-space: normal;
 }
 
 .beranda-see-all {
@@ -6833,11 +6934,17 @@ button {
 
 .event-table-wrap {
   overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.event-table-wrap::-webkit-scrollbar {
+  display: none;
 }
 
 .event-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 900px;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -6855,14 +6962,14 @@ button {
   text-align: left;
 }
 
-.event-table th:nth-child(1){width:110px}
-.event-table th:nth-child(2){width:220px}
-.event-table th:nth-child(3){width:150px}
-.event-table th:nth-child(4){width:115px}
-.event-table th:nth-child(5){width:125px}
-.event-table th:nth-child(6){width:70px}
-.event-table th:nth-child(7){width:90px}
-.event-table th:nth-child(8){width:105px}
+.event-table th:nth-child(1){width:10%}
+.event-table th:nth-child(2){width:21%}
+.event-table th:nth-child(3){width:13%}
+.event-table th:nth-child(4){width:10%}
+.event-table th:nth-child(5){width:12%}
+.event-table th:nth-child(6){width:8%}
+.event-table th:nth-child(7){width:10%}
+.event-table th:nth-child(8){width:16%}
 
 .event-table td {
   padding: 12px 10px;
@@ -6885,7 +6992,8 @@ button {
 
 .event-thumb {
   display: grid;
-  width: 84px;
+  width: 100%;
+  max-width: 84px;
   height: 48px;
   place-items: center;
   border: 1px solid #34435e;
@@ -7024,6 +7132,23 @@ button {
   color: #68758b;
 }
 
+.event-feedback {
+  margin: 12px 0;
+  padding: 11px 13px;
+  border: 1px solid #2a3852;
+  border-radius: 8px;
+  background: #0d1422;
+  color: #b7c0ce;
+  font: 500 12px/1.5 Inter, sans-serif;
+}
+.event-edit-save:disabled,
+.event-delete:disabled,
+.event-banner-preview button:disabled,
+.event-add-banner-meta button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
 .event-edit-card {
   margin-top: 18px;
   scroll-margin-top: 18px;
@@ -7151,9 +7276,11 @@ button {
 
 .event-date-input input {
   padding-right: 34px;
+  color-scheme: dark;
 }
 
 .event-date-input svg {
+  pointer-events: none;
   position: absolute;
   top: 50%;
   right: 11px;
@@ -7264,6 +7391,13 @@ button {
   color: #a9b4c6;
   font: 700 12px Inter, sans-serif;
   cursor: pointer;
+}
+
+.event-banner-preview button.event-banner-remove,
+.event-add-banner-meta button.event-banner-remove {
+  border-color: rgba(227,27,45,.35);
+  background: rgba(227,27,45,.10);
+  color: #f08b95;
 }
 
 .event-status-control > div {
@@ -7825,5 +7959,846 @@ button {
 
   .export-bottom button {
     width: 100%;
+  }
+}
+
+/* TA revision: readable tables without changing the established admin theme */
+.beranda-table,
+.pendaftar-table,
+.anggota-table {
+  table-layout: fixed;
+}
+.beranda-table { min-width: 1020px; }
+.pendaftar-table { min-width: 1160px; }
+.anggota-table { min-width: 1000px; }
+.beranda-table th, .beranda-table td { padding-left: 14px; padding-right: 14px; }
+.pendaftar-table th, .pendaftar-table td,
+.anggota-table th, .anggota-table td { padding-left: 14px; padding-right: 14px; }
+.beranda-table th:nth-child(1), .beranda-table td:nth-child(1) { width: 28%; }
+.beranda-table th:nth-child(2), .beranda-table td:nth-child(2) { width: 11%; }
+.beranda-table th:nth-child(3), .beranda-table td:nth-child(3) { width: 15%; }
+.beranda-table th:nth-child(4), .beranda-table td:nth-child(4) { width: 15%; }
+.beranda-table th:nth-child(5), .beranda-table td:nth-child(5) { width: 19%; }
+.beranda-table th:nth-child(6), .beranda-table td:nth-child(6) { width: 12%; }
+.pendaftar-table th:nth-child(1), .pendaftar-table td:nth-child(1) { width: 23%; }
+.pendaftar-table th:nth-child(2), .pendaftar-table td:nth-child(2) { width: 10%; }
+.pendaftar-table th:nth-child(3), .pendaftar-table td:nth-child(3) { width: 19%; }
+.pendaftar-table th:nth-child(4), .pendaftar-table td:nth-child(4) { width: 12%; }
+.pendaftar-table th:nth-child(5), .pendaftar-table td:nth-child(5) { width: 12%; }
+.pendaftar-table th:nth-child(6), .pendaftar-table td:nth-child(6) { width: 17%; }
+.pendaftar-table th:nth-child(7), .pendaftar-table td:nth-child(7) { width: 7%; }
+.anggota-table th:nth-child(1), .anggota-table td:nth-child(1) { width: 27%; }
+.anggota-table th:nth-child(2), .anggota-table td:nth-child(2) { width: 11%; }
+.anggota-table th:nth-child(3), .anggota-table td:nth-child(3) { width: 24%; }
+.anggota-table th:nth-child(4), .anggota-table td:nth-child(4) { width: 17%; }
+.anggota-table th:nth-child(5), .anggota-table td:nth-child(5) { width: 11%; }
+.anggota-table th:nth-child(6), .anggota-table td:nth-child(6) { width: 10%; }
+.pendaftar-table td, .anggota-table td, .beranda-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pendaftar-table td:first-child,
+.anggota-table td:first-child,
+.beranda-table td:first-child { overflow: hidden; }
+.beranda-person {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  max-width: 100%;
+}
+.beranda-person strong,
+.beranda-person span {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.beranda-person strong { color: #e5eaf1; font-weight: 700; }
+.beranda-person span { color: #758198; font-weight: 400; }
+.pendaftar-person, .anggota-person { width: 100%; max-width: 100%; }
+.pendaftar-person > div, .anggota-person > div { flex: 1; min-width: 0; overflow: hidden; }
+.pendaftar-person strong, .pendaftar-person span:not(.pendaftar-person__avatar),
+.anggota-person strong, .anggota-person span:not(.anggota-person__avatar) {
+  display: block;
+  width: 100%;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.admin-nim { font-variant-numeric: tabular-nums; color: #a9b4c7 !important; }
+.beranda-table th:nth-child(4), .beranda-table th:nth-child(5) { white-space: nowrap; }
+.pendaftar-table .beranda-status, .beranda-table .beranda-status { white-space: nowrap; }
+.pendaftar-detail, .anggota-detail { max-width: 100%; }
+@media (max-width: 760px) {
+  .beranda-table-wrap, .pendaftar-table-scroll, .anggota-table-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+}
+
+/* Reuse dark form styling on admin decision notes */
+.detail-pendaftar-note {
+  display: block;
+  margin-bottom: 14px;
+  color: #cdd5e2;
+  font-size: 13px;
+  font-weight: 500;
+}
+.detail-pendaftar-note textarea {
+  display: block;
+  width: 100%;
+  min-height: 90px;
+  margin-top: 9px;
+  padding: 12px 14px;
+  border: 1px solid #2a3750;
+  border-radius: 9px;
+  background: #0d1422;
+  color: #e7ebf2;
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+}
+.detail-pendaftar-note textarea::placeholder { color: #758198; }
+.detail-pendaftar-note textarea:focus { border-color: #6281a8; }
+.detail-pendaftar-note textarea:disabled {
+  background: #111a2b;
+  color: #aab7ca;
+  cursor: default;
+  opacity: 1;
+}
+.detail-pendaftar-reject:disabled,
+.detail-pendaftar-accept:disabled {
+  opacity: .36;
+  cursor: not-allowed;
+  box-shadow: none;
+  filter: grayscale(.35);
+}
+.detail-pendaftar-reject:disabled:hover,
+.detail-pendaftar-accept:disabled:hover { filter: grayscale(.35); }
+
+/* Signed private file previews, same card sizes as existing design */
+.detail-document__preview--ktm,
+.detail-document__preview--instagram,
+.detail-anggota-document__preview--ktm,
+.detail-anggota-document__preview--instagram {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: #0d1422;
+}
+.private-document-preview__file {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  background: #0d1422;
+  object-fit: contain;
+}
+.private-document-preview__message {
+  padding: 16px;
+  color: #a9b4c7 !important;
+  text-align: center;
+  font-size: 12px !important;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* TA responsive table fit: remove unnecessary scroll on desktop/laptop.
+   Keep horizontal swipe only when there is genuinely insufficient space. */
+.beranda-table { min-width: 760px; }
+.pendaftar-table { min-width: 850px; }
+.anggota-table { min-width: 850px; }
+.beranda-table th,
+.pendaftar-table th,
+.anggota-table th {
+  white-space: normal;
+  line-height: 1.35;
+  overflow-wrap: normal;
+}
+.beranda-table th,
+.beranda-table td,
+.pendaftar-table th,
+.pendaftar-table td,
+.anggota-table th,
+.anggota-table td {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+.pendaftar-table th:nth-child(1),
+.pendaftar-table td:nth-child(1) { width: 22%; }
+.pendaftar-table th:nth-child(3),
+.pendaftar-table td:nth-child(3) { width: 18%; }
+.pendaftar-table th:nth-child(7),
+.pendaftar-table td:nth-child(7) { width: 9%; }
+.beranda-table .beranda-status,
+.pendaftar-table .beranda-status {
+  max-width: 100%;
+  box-sizing: border-box;
+  padding-left: 6px;
+  padding-right: 6px;
+  font-size: 11px;
+  gap: 5px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.beranda-table .beranda-status i,
+.pendaftar-table .beranda-status i {
+  flex-shrink: 0;
+}
+.pendaftar-table .pendaftar-detail {
+  width: 100%;
+  min-width: 0;
+  padding: 0 4px;
+  justify-content: center;
+}
+.anggota-table .anggota-detail {
+  width: 100%;
+  min-width: 0;
+  padding: 0 4px;
+}
+.beranda-table .beranda-detail {
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .beranda-table-wrap,
+  .pendaftar-table-scroll,
+  .anggota-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Permit two-line date headers on narrow tables rather than overlap. */
+.beranda-table th:nth-child(4),
+.beranda-table th:nth-child(5) {
+  white-space: normal;
+}
+.pendaftar-table th:nth-child(4),
+.pendaftar-table th:nth-child(5) {
+  white-space: normal;
+}
+
+/* TA Admin responsive QA: allow actual NIM and long identities safely. */
+/* The desktop sidebar, type scale and brand colors are unchanged >=1200px. */
+.beranda-page,
+.pendaftar-page,
+.anggota-page,
+.detail-pendaftar-page,
+.detail-anggota-page,
+.export-page,
+.konten-page {
+  min-width: 0;
+  max-width: 100%;
+}
+.beranda-main,
+.pendaftar-main,
+.anggota-main,
+.detail-pendaftar-main,
+.detail-anggota-main,
+.export-main,
+.konten-main {
+  min-width: 0;
+}
+.beranda-table-wrap,
+.pendaftar-table-scroll,
+.anggota-table-scroll,
+.export-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.beranda-table,
+.pendaftar-table,
+.anggota-table {
+  table-layout: fixed;
+}
+.beranda-table .admin-nim,
+.pendaftar-table .admin-nim,
+.anggota-table .admin-nim,
+.export-table .export-mono {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-overflow: clip;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+.pendaftar-table .pendaftar-game,
+.anggota-table .pendaftar-game {
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pendaftar-table td,
+.anggota-table td,
+.beranda-table td {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.detail-pendaftar-info,
+.detail-anggota-info {
+  min-width: 0;
+}
+.detail-pendaftar-info strong,
+.detail-anggota-info strong {
+  display: block;
+  max-width: 100%;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+  line-height: 1.5;
+}
+.detail-pendaftar-hero,
+.detail-anggota-hero,
+.detail-pendaftar-card,
+.detail-anggota-card,
+.detail-pendaftar-review,
+.detail-anggota-actions {
+  max-width: 100%;
+  min-width: 0;
+}
+.detail-pendaftar-hero > div,
+.detail-anggota-hero > div {
+  min-width: 0;
+}
+.detail-pendaftar-hero p,
+.detail-anggota-hero p,
+.detail-pendaftar-motivation,
+.detail-anggota-motivation,
+.detail-document__actions {
+  overflow-wrap: anywhere;
+}
+.detail-pendaftar-hero__title-row,
+.detail-anggota-hero__title-row {
+  flex-wrap: wrap;
+}
+.detail-pendaftar-review > div,
+.detail-pendaftar-review__actions {
+  min-width: 0;
+}
+.detail-pendaftar-documents,
+.detail-anggota-documents {
+  min-width: 0;
+}
+.detail-document,
+.detail-anggota-document {
+  min-width: 0;
+}
+.detail-document__view-actions button,
+.detail-anggota-document__actions button {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.export-table td,
+.export-table th {
+  overflow-wrap: anywhere;
+}
+
+/* At tablet and compact laptop widths, reserve the full screen for the
+   content rather than leaving only 512px behind a fixed 256px sidebar. */
+@media (max-width: 1199px) {
+  .beranda-page,
+  .pendaftar-page,
+  .anggota-page,
+  .detail-pendaftar-page,
+  .detail-anggota-page,
+  .export-page,
+  .konten-page {
+    display: flex;
+    flex-direction: column;
+  }
+  .beranda-sidebar {
+    position: static;
+    inset: auto;
+    width: 100%;
+    min-height: 0;
+    flex: 0 0 auto;
+    border-right: 0;
+    border-bottom: 1px solid #1d283b;
+  }
+  .beranda-brand {
+    height: 68px;
+    flex-basis: 68px;
+  }
+  .beranda-nav {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 4px;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 9px 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .beranda-nav__item {
+    width: auto;
+    min-width: max-content;
+    flex: 0 0 auto;
+  }
+  .beranda-sidebar__bottom {
+    display: none;
+  }
+  .beranda-main,
+  .pendaftar-main,
+  .anggota-main,
+  .detail-pendaftar-main,
+  .detail-anggota-main,
+  .export-main,
+  .konten-main {
+    width: 100%;
+    margin-left: 0;
+  }
+  .beranda-header {
+    min-height: 68px;
+    height: auto;
+    padding: 14px 20px;
+    gap: 12px;
+  }
+  .beranda-period {
+    display: none;
+  }
+  .beranda-content,
+  .pendaftar-content,
+  .anggota-content,
+  .export-content,
+  .konten-content {
+    padding: 20px;
+    min-width: 0;
+  }
+  .detail-pendaftar-content,
+  .detail-anggota-content {
+    padding: 22px 20px 30px;
+  }
+  .pendaftar-filter-card,
+  .anggota-filter,
+  .export-filter-grid {
+    min-width: 0;
+  }
+  .pendaftar-table,
+  .anggota-table {
+    min-width: 850px;
+  }
+  .beranda-table {
+    min-width: 760px;
+  }
+  .detail-pendaftar-info-grid,
+  .detail-anggota-info-grid {
+    column-gap: 24px;
+  }
+}
+@media (max-width: 760px) {
+  .beranda-header {
+    padding: 12px 16px;
+  }
+  .beranda-content,
+  .pendaftar-content,
+  .anggota-content,
+  .export-content,
+  .konten-content,
+  .detail-pendaftar-content,
+  .detail-anggota-content {
+    padding: 16px;
+  }
+  .beranda-table-card__head,
+  .export-preview-head {
+    min-width: 0;
+  }
+  .beranda-see-all {
+    max-width: 100%;
+  }
+  .detail-pendaftar-hero__title-row,
+  .detail-anggota-hero__title-row {
+    align-items: flex-start;
+  }
+  .detail-pendaftar-review__actions {
+    flex-wrap: wrap;
+  }
+  .detail-pendaftar-reject,
+  .detail-pendaftar-accept {
+    flex: 1 1 140px;
+    min-height: 44px;
+  }
+  .detail-document__view-actions button,
+  .detail-anggota-document__actions button {
+    min-height: 40px;
+  }
+}
+@media (max-width: 400px) {
+  .beranda-table-card__head {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .detail-document__head > span,
+  .detail-anggota-document__head > span {
+    font-size: 11px;
+  }
+}
+
+/* At phone / portrait tablet widths, present admin table rows as readable
+   stacked records, keeping the original table appearance on desktop. */
+@media (max-width: 800px) {
+  .beranda-table-wrap,
+  .pendaftar-table-scroll,
+  .anggota-table-scroll,
+  .export-table-wrap {
+    overflow-x: visible;
+    max-width: 100%;
+  }
+  .beranda-table,
+  .pendaftar-table,
+  .anggota-table,
+  .export-table {
+    display: block;
+    width: 100%;
+    min-width: 0 !important;
+    border-collapse: separate;
+  }
+  .beranda-table thead,
+  .pendaftar-table thead,
+  .anggota-table thead,
+  .export-table thead {
+    display: none;
+  }
+  .beranda-table tbody,
+  .pendaftar-table tbody,
+  .anggota-table tbody,
+  .export-table tbody {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px;
+    min-width: 0;
+  }
+  .beranda-table tbody tr,
+  .pendaftar-table tbody tr,
+  .anggota-table tbody tr,
+  .export-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid #29374f;
+    border-radius: 10px;
+    background: #0d1627;
+  }
+  .beranda-table tbody td,
+  .pendaftar-table tbody td,
+  .anggota-table tbody td,
+  .export-table tbody td {
+    display: grid;
+    grid-template-columns: minmax(85px, 34%) minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+    width: auto !important;
+    height: auto;
+    min-height: 0;
+    padding: 7px 0;
+    border: 0;
+    overflow: visible;
+    text-align: left !important;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+  }
+  .beranda-table tbody td::before,
+  .pendaftar-table tbody td::before,
+  .anggota-table tbody td::before,
+  .export-table tbody td::before {
+    content: attr(data-label);
+    min-width: 0;
+    color: #8190aa;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .beranda-table tbody td:first-child,
+  .pendaftar-table tbody td:first-child,
+  .anggota-table tbody td:first-child,
+  .export-table tbody td:first-child {
+    display: block;
+    padding: 4px 0 12px;
+    margin-bottom: 5px;
+    border-bottom: 1px solid #29374f;
+  }
+  .beranda-table tbody td:first-child::before,
+  .pendaftar-table tbody td:first-child::before,
+  .anggota-table tbody td:first-child::before,
+  .export-table tbody td:first-child::before {
+    display: none;
+  }
+  .beranda-table .admin-nim,
+  .pendaftar-table .admin-nim,
+  .anggota-table .admin-nim {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-all;
+  }
+  .beranda-table .beranda-status,
+  .pendaftar-table .beranda-status,
+  .anggota-table .pendaftar-game,
+  .pendaftar-table .pendaftar-game,
+  .export-table .export-game-pill {
+    justify-self: start;
+    max-width: 100%;
+  }
+  .beranda-table .beranda-detail,
+  .pendaftar-table .pendaftar-detail,
+  .anggota-table .anggota-detail {
+    justify-self: start;
+    width: auto;
+    min-width: 94px;
+    min-height: 38px;
+    padding: 0 12px;
+  }
+  .export-table .export-mono {
+    overflow-wrap: anywhere;
+    word-break: break-all;
+  }
+  .beranda-person,
+  .pendaftar-person,
+  .anggota-person {
+    max-width: 100%;
+  }
+  .pendaftar-pagination,
+  .anggota-pagination {
+    gap: 10px;
+  }
+}
+
+/* Decision notes were plain-text grid items before: correct their width
+   and typography without changing the underlying private-file preview. */
+.detail-document__actions {
+  display: block;
+  min-width: 0;
+  width: 100%;
+  padding: 10px 12px 12px;
+  color: #8d99ae;
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+/* Apply the same compact navigation across every Kelola Konten subpage. */
+.game-divisi-page,
+.event-page,
+.keunggulan-page {
+  min-width: 0;
+  max-width: 100%;
+}
+.game-divisi-main,
+.event-main,
+.keunggulan-main {
+  min-width: 0;
+}
+@media (max-width: 1199px) {
+  .game-divisi-page,
+  .event-page,
+  .keunggulan-page {
+    display: flex;
+    flex-direction: column;
+  }
+  .game-divisi-main,
+  .event-main,
+  .keunggulan-main {
+    width: 100%;
+    margin-left: 0;
+  }
+  .game-divisi-content,
+  .event-content,
+  .keunggulan-content {
+    min-width: 0;
+    padding: 20px;
+  }
+  .game-divisi-table-wrap,
+  .event-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+}
+@media (max-width: 760px) {
+  .game-divisi-content,
+  .event-content,
+  .keunggulan-content {
+    padding: 16px;
+  }
+}
+
+/* Compact management records on phones and portrait tablets. */
+@media (max-width: 800px) {
+  .game-divisi-table-wrap,
+  .event-table-wrap {
+    margin-right: 0;
+    padding-right: 0;
+    overflow-x: visible;
+  }
+  .game-divisi-table,
+  .event-table {
+    display: block;
+    width: 100%;
+    min-width: 0 !important;
+    border-collapse: separate;
+  }
+  .game-divisi-table thead,
+  .event-table thead { display: none; }
+  .game-divisi-table tbody,
+  .event-table tbody {
+    display: grid;
+    grid-template-columns: minmax(0,1fr);
+    gap: 12px;
+    padding: 12px;
+    min-width: 0;
+  }
+  .game-divisi-table tbody tr,
+  .event-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0,1fr);
+    gap: 0;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid #29374f;
+    border-radius: 10px;
+    background: #0d1627;
+  }
+  .game-divisi-table tbody td,
+  .event-table tbody td {
+    display: grid;
+    grid-template-columns: minmax(90px, 34%) minmax(0,1fr);
+    align-items: start;
+    gap: 10px;
+    width: auto !important;
+    height: auto;
+    min-height: 0;
+    padding: 8px 0;
+    border: 0;
+    text-align: left !important;
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    line-height: 1.45;
+  }
+  .game-divisi-table tbody td::before,
+  .event-table tbody td::before {
+    content: attr(data-label);
+    min-width: 0;
+    color: #8190aa;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .game-divisi-table .game-divisi-name,
+  .event-table .event-name,
+  .game-divisi-table .game-divisi-description,
+  .event-table .event-game-tags,
+  .game-divisi-table .game-divisi-actions,
+  .event-table .event-actions {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+  .game-divisi-table .game-divisi-description {
+    margin: 0;
+  }
+  .game-divisi-table .game-divisi-actions,
+  .event-table .event-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .game-divisi-table .game-divisi-edit,
+  .event-table .event-edit,
+  .game-divisi-table .game-divisi-delete,
+  .event-table .event-delete {
+    min-height: 36px;
+  }
+}
+
+/* Admin QA final: keep administrator identity visible when sidebar becomes a top nav. */
+@media (max-width: 1199px) {
+  .beranda-sidebar .beranda-sidebar__bottom {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    margin-top: 0;
+    padding: 8px 16px;
+    box-sizing: border-box;
+    justify-content: flex-end;
+    border-top: 1px solid #253149;
+  }
+  .beranda-sidebar .beranda-admin {
+    display: flex;
+    width: min(100%, 290px);
+    min-width: 0;
+    min-height: 48px;
+    padding: 6px 10px;
+  }
+  .beranda-sidebar .beranda-admin__copy {
+    min-width: 0;
+    flex: 1;
+  }
+  .beranda-sidebar .beranda-admin__logout {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+  }
+}
+@media (max-width: 600px) {
+  .beranda-sidebar .beranda-sidebar__bottom {
+    justify-content: stretch;
+    padding: 8px 12px;
+  }
+  .beranda-sidebar .beranda-admin {
+    width: 100%;
+  }
+}
+/* Do not truncate game names. Allow two readable lines inside narrow columns. */
+.pendaftar-table .pendaftar-game,
+.anggota-table .pendaftar-game {
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+  width: auto;
+  min-height: 26px;
+  box-sizing: border-box;
+  align-items: center;
+  padding: 5px 7px;
+  gap: 5px;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: normal;
+  word-break: normal;
+  line-height: 1.35;
+  text-align: left;
+}
+.pendaftar-table .pendaftar-game i,
+.anggota-table .pendaftar-game i {
+  flex: 0 0 6px;
+}
+
+/* Recover unnecessary table-cell spacing on laptop and desktop so
+   common game names fit on one line without squeezing status or NIM. */
+@media (min-width: 801px) {
+  .pendaftar-table td:nth-child(4),
+  .anggota-table td:nth-child(4) {
+    padding-left: 5px;
+    padding-right: 5px;
+  }
+  .pendaftar-table .pendaftar-game,
+  .anggota-table .pendaftar-game {
+    padding: 4px 5px;
+    gap: 4px;
+    font-size: 11px;
   }
 }

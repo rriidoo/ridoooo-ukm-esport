@@ -4,7 +4,7 @@ import emailIcon from '../assets/icon-email.svg';
 import lockIcon from '../assets/icon-lock.svg';
 import eyeIcon from '../assets/icon-eye.svg';
 
-export default function LoginCard({ onForgotPassword, onLogin }) {
+export default function LoginCard({ onForgotPassword, onLogin, authError, loginBusy }) {
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: '', password: '', remember: false });
 
@@ -87,8 +87,9 @@ export default function LoginCard({ onForgotPassword, onLogin }) {
           </button>
         </div>
 
-        <button className="login-button" type="submit">
-          Login Admin
+        {authError && <p role="alert" style={{ color: '#ff7777', marginBottom: 8 }}>{authError}</p>}
+        <button className="login-button" type="submit" disabled={loginBusy}>
+          {loginBusy ? 'Memeriksa akun...' : 'Login Admin'}
         </button>
       </form>
     </section>

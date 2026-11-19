@@ -1,9 +1,8 @@
+import AdminSidebarProfile from '../components/AdminSidebarProfile';
 import { useMemo, useState } from 'react';
 import {
-  Bell,
   FileText,
   Grid2X2,
-  LogOut,
   RotateCcw,
   Search,
   Table2,
@@ -114,7 +113,7 @@ export const applicants = [
   },
 ];
 
-export default function Pendaftar({ onLogout, onNavigate, onDetail }) {
+export default function Pendaftar({ adminUser, onLogout, onNavigate, onDetail, applicants = [], loadError = '' }) {
   const [query, setQuery] = useState('');
   const [game, setGame] = useState('');
   const [cohort, setCohort] = useState('');
@@ -128,15 +127,18 @@ export default function Pendaftar({ onLogout, onNavigate, onDetail }) {
       const matchesQuery =
         !normalizedQuery ||
         item.name.toLowerCase().includes(normalizedQuery) ||
-        item.nim.toLowerCase().includes(normalizedQuery);
+        item.email.toLowerCase().includes(normalizedQuery) ||
+        (item.nim || '').toLowerCase().includes(normalizedQuery);
       const matchesGame = !game || item.game === game;
       const matchesCohort = !cohort || item.cohort === cohort;
       const matchesStatus = !status || item.status === status;
 
       return matchesQuery && matchesGame && matchesCohort && matchesStatus;
     });
-  }, [query, game, cohort, status]);
+  }, [applicants, query, game, cohort, status]);
 
+  const pageCount = Math.max(1, Math.ceil(filteredApplicants.length / 10));
+  const visibleApplicants = filteredApplicants.slice((Math.min(page, pageCount) - 1) * 10, Math.min(page, pageCount) * 10);
   function resetFilters() {
     setQuery('');
     setGame('');
@@ -179,18 +181,7 @@ export default function Pendaftar({ onLogout, onNavigate, onDetail }) {
           </button>
         </nav>
 
-        <div className="beranda-sidebar__bottom">
-          <div className="beranda-admin">
-            <div className="beranda-admin__avatar">RP</div>
-            <div className="beranda-admin__copy">
-              <strong>Raka Pratan</strong>
-              <span>SUPER ADMIN</span>
-            </div>
-            <button type="button" className="beranda-admin__logout" onClick={onLogout} aria-label="Logout">
-              <LogOut size={15} strokeWidth={1.8} />
-            </button>
-          </div>
-        </div>
+        <AdminSidebarProfile adminUser={adminUser} onLogout={onLogout} />
       </aside>
 
       <section className="pendaftar-main">
@@ -200,12 +191,8 @@ export default function Pendaftar({ onLogout, onNavigate, onDetail }) {
           <div className="beranda-header__actions">
             <div className="beranda-period">
               <span className="beranda-period__dot" />
-              <span>Periode Aktif: Registrasi 2024/2025</span>
+              <span>Data Pendaftaran UKM Esports</span>
             </div>
-            <button type="button" className="beranda-notification" aria-label="Notifikasi">
-              <Bell size={16} strokeWidth={1.8} />
-              <span className="beranda-notification__dot" />
-            </button>
           </div>
         </header>
 
@@ -220,8 +207,8 @@ export default function Pendaftar({ onLogout, onNavigate, onDetail }) {
                   setQuery(event.target.value);
                   setPage(1);
                 }}
-                placeholder="Cari nama atau NIM..."
-                aria-label="Cari nama atau NIM"
+                placeholder="Cari nama, NIM, atau email..."
+                aria-label="Cari nama, NIM, atau email"
               />
             </label>
 
@@ -234,10 +221,9 @@ export default function Pendaftar({ onLogout, onNavigate, onDetail }) {
               aria-label="Filter game"
             >
               <option value="">Semua Game</option>
-              <option value="Valorant">Valorant</option>
-              <option value="Mobile Legends">Mobile Legends</option>
-              <option value="PUBG Mobile">PUBG Mobile</option>
-              <option value="eFootball">eFootball</option>
+              {[...new Set(applicants.map((item) => item.game))].filter(Boolean).sort((a, b) => a.localeCompare(b)).map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
             </select>
 
             <select
@@ -249,10 +235,7 @@ export default function Pendaftar({ onLogout, onNavigate, onDetail }) {
               aria-label="Filter angkatan"
             >
               <option value="">Semua Angkatan</option>
-              <option value="2024">2024</option>
-              <option value="2023">2023</option>
-              <option value="2022">2022</option>
-              <option value="2021">2021</option>
+              {[...new Set(applicants.map(a => a.cohort))].sort().reverse().map(year => <option key={year} value={year}>{year}</option>)}
             </select>
 
             <select
@@ -290,33 +273,33 @@ export default function Pendaftar({ onLogout, onNavigate, onDetail }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredApplicants.map((item) => (
-                    <tr key={item.nim}>
-                      <td>
+                  {visibleApplicants.map((item) => (
+                    <tr key={item.id}>
+                      <td data-label="Mahasiswa">
                         <div className="pendaftar-person">
                           <span className="pendaftar-person__avatar">{item.initials}</span>
                           <div>
-                            <strong>{item.name}</strong>
-                            <span>{item.email}</span>
+                            <strong title={item.name}>{item.name}</strong>
+                            <span title={item.email}>{item.email}</span>
                           </div>
                         </div>
                       </td>
-                      <td>{item.nim}</td>
-                      <td>{item.study}</td>
-                      <td>
+                      <td data-label="NIM" className="admin-nim" title={item.nim || "NIM belum tersedia"}>{item.nim}</td>
+                      <td data-label="Program Studi">{item.study}</td>
+                      <td data-label="Game">
                         <span className={`pendaftar-game pendaftar-game--${item.game.toLowerCase().replaceAll(' ', '-').replace('football', 'football')}`}>
                           <i />
                           {item.game}
                         </span>
                       </td>
-                      <td>{item.date}</td>
-                      <td>
+                      <td data-label="Tanggal Daftar">{item.date}</td>
+                      <td data-label="Status">
                         <span className={`beranda-status beranda-status--${item.tone}`}>
                           <i />
                           {item.status}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Aksi">
                         <button type="button" className="pendaftar-detail" onClick={() => onDetail?.(item)}>
                           Detail <span>›</span>
                         </button>
@@ -326,27 +309,28 @@ export default function Pendaftar({ onLogout, onNavigate, onDetail }) {
                 </tbody>
               </table>
 
-              {filteredApplicants.length === 0 && (
+              {loadError && <div className="pendaftar-empty" role="alert">{loadError}</div>}
+              {filteredApplicants.length === 0 && !loadError && (
                 <div className="pendaftar-empty">Tidak ada pendaftar yang sesuai dengan filter.</div>
               )}
             </div>
 
             <footer className="pendaftar-pagination">
               <p>
-                Menampilkan <strong>{filteredApplicants.length ? '1–' + filteredApplicants.length : '0'}</strong> dari{' '}
-                <strong>1.284</strong> pendaftar
+                Menampilkan <strong>{filteredApplicants.length ? ((Math.min(page,pageCount)-1)*10+1) + '–' + Math.min(Math.min(page,pageCount)*10,filteredApplicants.length) : '0'}</strong> dari{' '}
+                <strong>{applicants.length}</strong> pendaftar
               </p>
 
               <div className="pendaftar-pagination__controls">
                 <button
                   type="button"
                   className="pendaftar-page-button pendaftar-page-button--wide"
-                  disabled={page === 1}
+                  disabled={page <= 1}
                   onClick={() => setPage((current) => Math.max(1, current - 1))}
                 >
                   ‹ Sebelumnya
                 </button>
-                {[1, 2, 3].map((pageNumber) => (
+                {Array.from({ length: Math.min(3,pageCount) }, (_, i) => i+1).map((pageNumber) => (
                   <button
                     key={pageNumber}
                     type="button"
@@ -356,19 +340,19 @@ export default function Pendaftar({ onLogout, onNavigate, onDetail }) {
                     {pageNumber}
                   </button>
                 ))}
-                <span className="pendaftar-pagination__ellipsis">...</span>
-                <button
+
+                {pageCount > 3 && <button
                   type="button"
-                  className={page === 128 ? 'pendaftar-page-button pendaftar-page-button--active' : 'pendaftar-page-button'}
-                  onClick={() => setPage(128)}
+                  className={page === pageCount ? 'pendaftar-page-button pendaftar-page-button--active' : 'pendaftar-page-button'}
+                  onClick={() => setPage(pageCount)}
                 >
-                  128
-                </button>
+                  {pageCount}
+                </button>}
                 <button
                   type="button"
                   className="pendaftar-page-button pendaftar-page-button--wide"
-                  disabled={page === 128}
-                  onClick={() => setPage((current) => Math.min(128, current + 1))}
+                  disabled={page === pageCount}
+                  onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
                 >
                   Berikutnya ›
                 </button>

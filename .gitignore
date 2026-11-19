@@ -3,3 +3,6 @@
 **/.env
 **/.env.*
 !**/.env.example
+
+# Local QA screenshots and safety backups; never put in deployed repository.
+_ta_backups/

@@ -1,7 +1,7 @@
 export default function Footer() {
   return (
     <footer className="site-footer">
-      © 2026 Telkom University Purwokerto Esports. All rights reserved.
+      © 2026 UKM Esports Universitas Telkom Purwokerto. Hak cipta dilindungi.
     </footer>
   );
 }

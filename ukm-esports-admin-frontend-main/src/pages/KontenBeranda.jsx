@@ -1,13 +1,15 @@
-import { useRef, useState } from 'react';
+import AdminSidebarProfile from '../components/AdminSidebarProfile';
+import { useEffect, useRef, useState } from 'react';
+import { supabase } from '../lib/supabase';
+import { DEFAULT_GAME_DIVISIONS, fetchGameDivisions } from '../lib/gameDivisions';
+import { DEFAULT_HERO, DEFAULT_STATS, DEFAULT_ADVANTAGES, fetchHomeContent, saveHomeContentSection } from '../lib/homeContent';
 import {
-  Bell,
   ChevronDown,
   ChevronUp,
   FileText,
   Gamepad2,
   Home,
   Image as ImageIcon,
-  LogOut,
   Pencil,
   Save,
   Table2,
@@ -24,7 +26,9 @@ import onlineIcon from '../assets/konten-icons/Background-2.png';
 import realtimeIcon from '../assets/konten-icons/Background-3.png';
 import certificateIcon from '../assets/konten-icons/Background-4.png';
 import gameIcon from '../assets/konten-icons/Background-5.png';
-import eventIcon from '../assets/konten-icons/Background-6.png';
+import rosterAdvantageIcon from '../assets/edit-keunggulan-icons/Icon.png';
+import esportsAdvantageIcon from '../assets/edit-keunggulan-icons/Icon-1.png';
+import officialAdvantageIcon from '../assets/edit-keunggulan-icons/Icon-2.png';
 
 const initialGames = [
   { order: 1, code: 'MLBB', name: 'Mobile Legends: Bang Bang', detail: 'Divisi MOBA • 240 Anggota', visible: true },
@@ -33,7 +37,7 @@ const initialGames = [
   { order: 4, code: 'EFB', name: 'eFootball', detail: 'Divisi Sports Sim • 85 Anggota', visible: true },
 ];
 
-const advantages = [
+const initialAdvantages = [
   {
     icon: onlineIcon,
     title: 'Pendaftaran 100% Online',
@@ -51,26 +55,187 @@ const advantages = [
   },
 ];
 
-export default function KontenBeranda({ onLogout, onNavigate }) {
+export default function KontenBeranda({ adminUser, onLogout, onNavigate }) {
   const fileInputRef = useRef(null);
   const [heroVisible, setHeroVisible] = useState(true);
   const [statVisible, setStatVisible] = useState(true);
   const [games, setGames] = useState(initialGames);
-  const [hero, setHero] = useState({
-    badge: 'NEW SEASON REGISTRATION OPEN',
-    title: 'Bergabunglah dengan Komunitas E-Sport Telkom Purwokerto',
-    description:
-      'Pendaftaran digital cepat dan mudah. Tunjukkan skill terbaikmu dan jadilah bagian dari atlet profesional kampus.',
-    cta: 'DAFTAR SEKARANG',
-  });
-  const [stats, setStats] = useState({
-    students: '1.200+',
-    divisions: '4',
-    champions: '12+',
-  });
+  const [hero, setHero] = useState(DEFAULT_HERO);
+  const [stats, setStats] = useState(DEFAULT_STATS);
+  const [advantages, setAdvantages] = useState(initialAdvantages);
+  const [bannerFile, setBannerFile] = useState(null);
+  const [bannerPreview, setBannerPreview] = useState('');
+  const [saving, setSaving] = useState('');
+  const [feedback, setFeedback] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      fetchHomeContent(),
+      fetchGameDivisions().catch(() => DEFAULT_GAME_DIVISIONS),
+    ]).then(([content, divisions]) => {
+      if (!mounted) return;
+      setHero(content.hero);
+      setHeroVisible(content.hero.visible !== false);
+      setStats(content.stats);
+      setStatVisible(content.stats.visible !== false);
+      const aliases = { mlbb: 'MLBB', pubg: 'PUBG', valorant: 'VLRN', efootball: 'EFB' };
+      const catalogue = divisions.map((division) => {
+        const seed = initialGames.find((item) => item.code === aliases[division.code]);
+        return {
+          id: division.code,
+          code: division.short,
+          name: division.name,
+          detail: seed?.detail || division.division_label || 'Divisi Game',
+          divisionVisible: division.is_visible !== false,
+          visible: true,
+        };
+      });
+      const byCode = new Map();
+      for (const item of catalogue) {
+        byCode.set(item.code, item);
+        if (aliases[item.id]) byCode.set(aliases[item.id], item);
+      }
+      const arranged = [];
+      const used = new Set();
+      for (const entry of content.games) {
+        const division = byCode.get(entry.code);
+        if (!division || used.has(division.id)) continue;
+        used.add(division.id);
+        arranged.push({ ...division, visible: entry.visible !== false });
+      }
+      for (const division of catalogue) {
+        if (!used.has(division.id)) arranged.push(division);
+      }
+      setGames(arranged.map((item, i) => ({ ...item, order: i + 1 })));
+      const iconById = {
+        document: onlineIcon, progress: realtimeIcon, certificate: certificateIcon,
+        roster: rosterAdvantageIcon, esports: esportsAdvantageIcon, official: officialAdvantageIcon,
+      };
+      setAdvantages(content.advantages.map((item) => ({ ...item, icon: iconById[item.iconId] || onlineIcon })));
+    }).catch(() => {
+      if (mounted) setFeedback('Konten belum tersambung. Jalankan SQL migration 005 di Supabase agar perubahan bisa disimpan.');
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!bannerFile) { setBannerPreview(''); return; }
+    const url = URL.createObjectURL(bannerFile);
+    setBannerPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [bannerFile]);
+
+  async function saveHero() {
+    if (saving) return;
+    const next = {
+      ...hero,
+      visible: heroVisible,
+      badge: hero.badge.trim(),
+      title: hero.title.trim(),
+      description: hero.description.trim(),
+      cta: hero.cta.trim(),
+    };
+    if (!next.title || !next.cta || !next.description || !next.badge) {
+      setFeedback('Lengkapi semua teks Hero sebelum menyimpan.');
+      return;
+    }
+    if (next.title.length > 180 || next.description.length > 600 || next.badge.length > 100 || next.cta.length > 60) {
+      setFeedback('Teks Hero terlalu panjang. Perpendek judul, deskripsi, badge, atau CTA.');
+      return;
+    }
+    setSaving('hero');
+    setFeedback('');
+    let uploadedPath = null;
+    try {
+      if (bannerFile) {
+        const extensions = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+        const extension = extensions[bannerFile.type];
+        if (!extension || bannerFile.size === 0 || bannerFile.size > 2 * 1024 * 1024) {
+          throw new Error('Gambar Hero harus JPG/PNG/WebP dan maksimal 2 MB.');
+        }
+        uploadedPath = 'home/' + crypto.randomUUID() + '.' + extension;
+        const { error: uploadError } = await supabase.storage.from('ridoooo-site-banners')
+          .upload(uploadedPath, bannerFile, { upsert: false, contentType: bannerFile.type });
+        if (uploadError) throw uploadError;
+        next.banner_url = supabase.storage.from('ridoooo-site-banners').getPublicUrl(uploadedPath).data.publicUrl;
+      }
+      await saveHomeContentSection('home_hero', next);
+      setHero(next);
+      setBannerFile(null);
+      setFeedback('Hero tersimpan. Perubahan tampil pada website User setelah halaman diperbarui.');
+    } catch (error) {
+      if (uploadedPath) await supabase.storage.from('ridoooo-site-banners').remove([uploadedPath]);
+      setFeedback('Gagal menyimpan Hero: ' + (error.message || 'Periksa koneksi Supabase dan SQL 005.'));
+    } finally {
+      setSaving('');
+    }
+  }
+
+  async function saveStats() {
+    if (saving) return;
+    const next = { ...stats, visible: statVisible };
+    if ([next.students, next.divisions, next.champions].some((value) => !value.trim() || value.length > 30)) {
+      setFeedback('Isi seluruh statistik (maksimal 30 karakter per angka).');
+      return;
+    }
+    setSaving('stats');
+    setFeedback('');
+    try {
+      await saveHomeContentSection('home_stats', next);
+      setStats(next);
+      setFeedback('Statistik tersimpan dan siap ditampilkan di website User.');
+    } catch (error) {
+      setFeedback('Gagal menyimpan statistik: ' + (error.message || 'Periksa SQL 005.'));
+    } finally {
+      setSaving('');
+    }
+  }
+
+  async function saveGames(next) {
+    if (saving) return;
+    setSaving('games');
+    setFeedback('');
+    try {
+      await saveHomeContentSection('home_games', {
+        items: next.map(({ code, visible }) => ({ code, visible })),
+      });
+      setGames(next.map((item, i) => ({ ...item, order: i + 1 })));
+      setFeedback('Urutan dan visibilitas game sudah tersimpan di website User.');
+    } catch (error) {
+      setFeedback('Gagal menyimpan game: ' + (error.message || 'Periksa SQL 005.'));
+    } finally {
+      setSaving('');
+    }
+  }
 
   function toggleGameVisibility(code) {
-    setGames((items) => items.map((item) => (item.code === code ? { ...item, visible: !item.visible } : item)));
+    saveGames(games.map((item) => (item.code === code ? { ...item, visible: !item.visible } : item)));
+  }
+
+  function moveGame(index, direction) {
+    const other = index + direction;
+    if (other < 0 || other >= games.length) return;
+    const next = [...games];
+    [next[index], next[other]] = [next[other], next[index]];
+    saveGames(next);
+  }
+
+  function resetBannerToDefault() {
+    setBannerFile(null);
+    setHero((current) => ({ ...current, banner_url: null }));
+    setFeedback('Gambar bawaan dipilih. Klik Simpan Perubahan Hero agar perubahan tampil di website User.');
+  }
+
+  function chooseBanner(file) {
+    if (!file) return;
+    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowed.includes(file.type) || file.size === 0 || file.size > 2 * 1024 * 1024) {
+      setFeedback('Gambar harus JPG/PNG/WebP dengan ukuran maksimal 2 MB.');
+      return;
+    }
+    setFeedback('Gambar dipilih. Tekan Simpan Perubahan Hero untuk mengunggahnya.');
+    setBannerFile(file);
   }
 
   return (
@@ -111,18 +276,7 @@ export default function KontenBeranda({ onLogout, onNavigate }) {
           </button>
         </nav>
 
-        <div className="beranda-sidebar__bottom">
-          <div className="beranda-admin">
-            <div className="beranda-admin__avatar">RP</div>
-            <div className="beranda-admin__copy">
-              <strong>Raka Pratan</strong>
-              <span>SUPER ADMIN</span>
-            </div>
-            <button type="button" className="beranda-admin__logout" onClick={onLogout} aria-label="Logout">
-              <LogOut size={15} strokeWidth={1.8} />
-            </button>
-          </div>
-        </div>
+        <AdminSidebarProfile adminUser={adminUser} onLogout={onLogout} />
       </aside>
 
       <section className="konten-main">
@@ -131,12 +285,8 @@ export default function KontenBeranda({ onLogout, onNavigate }) {
           <div className="beranda-header__actions">
             <div className="beranda-period">
               <span className="beranda-period__dot" />
-              <span>Periode Aktif: Registrasi 2024/2025</span>
+              <span>Data Pendaftaran UKM Esports</span>
             </div>
-            <button type="button" className="beranda-notification" aria-label="Notifikasi">
-              <Bell size={16} strokeWidth={1.8} />
-              <span className="beranda-notification__dot" />
-            </button>
           </div>
         </header>
 
@@ -155,6 +305,8 @@ export default function KontenBeranda({ onLogout, onNavigate }) {
               <span>Event</span>
             </button>
           </div>
+
+          {feedback && <p role="status" aria-live="polite" style={{ color: '#e5efff', padding: '12px 16px', border: '1px solid #31435f', borderRadius: 10, margin: '0 0 16px' }}>{feedback}</p>}
 
           <section className="konten-card konten-card--hero">
             <div className="konten-card__head">
@@ -198,6 +350,7 @@ export default function KontenBeranda({ onLogout, onNavigate }) {
               <div className="konten-banner-control">
                 <span className="konten-banner-control__label">Banner / Gambar Utama</span>
                 <div className="konten-banner-preview">
+                  {(bannerPreview || hero.banner_url) && <img src={bannerPreview || hero.banner_url} alt="Preview gambar hero" style={{ position: 'absolute', inset: 0, width: '100%', height: 'calc(100% - 41px)', objectFit: 'cover' }} />}
                   <div className="konten-banner-preview__glow" />
                   <div className="konten-banner-preview__screen">
                     <span>TEL-U</span>
@@ -206,8 +359,8 @@ export default function KontenBeranda({ onLogout, onNavigate }) {
                   <div className="konten-banner-preview__stage" />
                   <div className="konten-banner-preview__meta">
                     <div>
-                      <strong>hero-banner-2025.webp</strong>
-                      <span>1920 × 1080 px • 842 KB</span>
+                      <strong>{bannerFile?.name || (hero.banner_url ? 'Gambar Hero tersimpan' : 'Gambar bawaan website')}</strong>
+                      <span>{bannerFile ? (bannerFile.size / 1048576).toFixed(2) + ' MB • Belum disimpan' : hero.banner_url ? 'Aktif di website User' : 'Belum ada gambar unggahan'}</span>
                     </div>
                     <button type="button" onClick={() => fileInputRef.current?.click()}>
                       <ImageIcon size={12} strokeWidth={1.8} />
@@ -215,15 +368,20 @@ export default function KontenBeranda({ onLogout, onNavigate }) {
                     </button>
                   </div>
                 </div>
-                <input ref={fileInputRef} type="file" hidden accept="image/png,image/jpeg,image/webp" />
+                <input ref={fileInputRef} type="file" hidden accept="image/png,image/jpeg,image/webp" onChange={(e) => { chooseBanner(e.target.files?.[0]); e.target.value = ''; }} />
                 <p className="konten-help">Format JPG/PNG/WebP, rekomendasi rasio 16:9, maksimal ukuran file 2 MB.</p>
+                {(hero.banner_url || bannerFile) && (
+                  <button type="button" className="konten-secondary-button" disabled={Boolean(saving)} onClick={resetBannerToDefault}>
+                    Kembalikan Gambar Bawaan
+                  </button>
+                )}
               </div>
             </div>
 
             <div className="konten-card__footer">
-              <button type="button" className="konten-save-button">
+              <button type="button" className="konten-save-button" onClick={saveHero} disabled={Boolean(saving)}>
                 <span className="konten-save-button__check">✓</span>
-                Simpan Perubahan Hero
+                {saving === 'hero' ? 'Menyimpan...' : 'Simpan Perubahan Hero'}
               </button>
             </div>
           </section>
@@ -263,9 +421,9 @@ export default function KontenBeranda({ onLogout, onNavigate }) {
             </div>
 
             <div className="konten-card__footer">
-              <button type="button" className="konten-save-button">
+              <button type="button" className="konten-save-button" onClick={saveStats} disabled={Boolean(saving)}>
                 <Save size={12} strokeWidth={2} />
-                Simpan Statistik
+                {saving === 'stats' ? 'Menyimpan...' : 'Simpan Statistik'}
               </button>
             </div>
           </section>
@@ -293,7 +451,7 @@ export default function KontenBeranda({ onLogout, onNavigate }) {
                     <strong>{item.title}</strong>
                     <span>{item.description}</span>
                   </div>
-                  <span className="konten-active-badge">Aktif</span>
+                  <span className="konten-active-badge">{item.active === false ? 'Nonaktif' : 'Aktif'}</span>
                 </article>
               ))}
             </div>
@@ -306,7 +464,7 @@ export default function KontenBeranda({ onLogout, onNavigate }) {
                 <div>
                   <div className="konten-heading-with-badge">
                     <h2>Game yang Ditampilkan</h2>
-                    <span>4 Game Aktif</span>
+                    <span>{games.filter((item) => item.visible && item.divisionVisible !== false).length} Game Aktif</span>
                   </div>
                   <p>Urutan dan visibilitas game yang langsung disorot pada landing page.</p>
                 </div>
@@ -322,16 +480,16 @@ export default function KontenBeranda({ onLogout, onNavigate }) {
                     <strong>{game.name}</strong>
                     <span>{game.detail}</span>
                   </div>
-                  <span className={game.visible ? 'konten-show-badge' : 'konten-show-badge konten-show-badge--hidden'}>{game.visible ? 'Tampil' : 'Disembunyikan'}</span>
+                  <span className={game.visible && game.divisionVisible !== false ? 'konten-show-badge' : 'konten-show-badge konten-show-badge--hidden'}>{game.divisionVisible === false ? 'Disembunyikan dari Game/Divisi' : game.visible ? 'Tampil' : 'Disembunyikan'}</span>
                   <div className="konten-order-actions" aria-label={`Atur urutan ${game.name}`}>
-                    <button type="button" disabled={index === 0} aria-label="Naikkan">
+                    <button type="button" disabled={index === 0 || Boolean(saving)} onClick={() => moveGame(index, -1)} aria-label={'Naikkan ' + game.name}>
                       <ChevronUp size={14} strokeWidth={1.8} />
                     </button>
-                    <button type="button" disabled={index === games.length - 1} aria-label="Turunkan">
+                    <button type="button" disabled={index === games.length - 1 || Boolean(saving)} onClick={() => moveGame(index, 1)} aria-label={'Turunkan ' + game.name}>
                       <ChevronDown size={14} strokeWidth={1.8} />
                     </button>
                   </div>
-                  <button type="button" className="konten-hide-button" onClick={() => toggleGameVisibility(game.code)}>{game.visible ? 'Sembunyikan' : 'Tampilkan'}</button>
+                  <button type="button" className="konten-hide-button" disabled={Boolean(saving) || game.divisionVisible === false} title={game.divisionVisible === false ? 'Aktifkan lagi melalui tab Game/Divisi.' : 'Atur tampilan kartu di Beranda.'} onClick={() => toggleGameVisibility(game.code)}>{game.visible ? 'Sembunyikan' : 'Tampilkan'}</button>
                 </article>
               ))}
             </div>
@@ -342,16 +500,6 @@ export default function KontenBeranda({ onLogout, onNavigate }) {
             </p>
           </section>
 
-          <section className="konten-card konten-card--event-preview">
-            <div className="konten-card__head konten-card__head--compact">
-              <div className="konten-card__heading">
-                <img src={eventIcon} alt="" aria-hidden="true" className="konten-section-icon" />
-                <div>
-                  <h2>Event yang Ditampilkan</h2>
-                </div>
-              </div>
-            </div>
-          </section>
         </div>
       </section>
     </main>
