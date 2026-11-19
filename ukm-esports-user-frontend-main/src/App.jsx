@@ -572,7 +572,7 @@ function RegistrationDocumentUpload({
             <img src={selected ? uploadCheckLargeIcon : uploadCloudIcon} alt="" />
           </span>
           <strong>{selected ? 'Berkas siap diunggah' : 'Pilih berkas atau tarik ke sini'}</strong>
-          <small>Format {formats} (Maks. 2MB)</small>
+          <small>Format {formats} (Maks. 5MB)</small>
         </label>
 
         {selected && (

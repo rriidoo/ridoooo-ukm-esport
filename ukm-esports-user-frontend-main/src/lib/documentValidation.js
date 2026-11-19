@@ -1,5 +1,5 @@
 // Read file signatures instead of trusting MIME metadata from mobile file pickers.
-const MAX_BYTES = 2 * 1024 * 1024;
+const MAX_BYTES = 5 * 1024 * 1024;
 const SIGNATURES = [
   {
     mime: 'image/jpeg',
@@ -22,7 +22,7 @@ export async function prepareDocumentFile(file, { isInstagram = false } = {}) {
   const label = isInstagram ? 'Bukti Instagram' : 'KTM';
   if (!file || typeof file.size !== 'number') return { error: label + ' belum dipilih.' };
   if (file.size === 0) return { error: label + ' tidak boleh berupa file kosong.' };
-  if (file.size > MAX_BYTES) return { error: label + ' maksimal 2 MB.' };
+  if (file.size > MAX_BYTES) return { error: label + ' maksimal 5 MB.' };
 
   try {
     const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
