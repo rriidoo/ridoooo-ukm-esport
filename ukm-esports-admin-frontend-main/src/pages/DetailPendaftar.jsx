@@ -243,7 +243,7 @@ export default function DetailPendaftar({ adminUser, applicant, onBack, onLogout
 
           {error && <p role="alert" style={{ color: '#ff7777', marginBottom: 12 }}>{error}</p>}
           <label className="detail-pendaftar-note">
-            <span className="detail-pendaftar-note__heading">{data.status === 'Menunggu Verifikasi' ? 'Catatan keputusan (opsional)' : 'Catatan keputusan'}</span>
+            <span className="detail-pendaftar-note__heading">Catatan keputusan (opsional)</span>
             <span className="detail-pendaftar-note__divider" aria-hidden="true" />
             <textarea value={reviewNote} onChange={e => setReviewNote(e.target.value)} disabled={data.status !== 'Menunggu Verifikasi'} maxLength={500} placeholder={data.status === 'Menunggu Verifikasi' ? 'Alasan penolakan atau catatan verifikasi' : 'Tidak ada catatan keputusan'} />
           </label>
