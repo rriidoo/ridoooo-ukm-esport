@@ -8923,3 +8923,55 @@ button {
   .admin-confirm-actions { flex-direction: column-reverse; }
   .admin-confirm-actions button { width: 100%; }
 }
+
+/* Decision note: separate heading and content, consistent with Admin dark cards. */
+.detail-pendaftar-note {
+  gap: 0;
+  padding: 18px 20px 20px;
+  border-color: #344760;
+  border-radius: 14px;
+  background: #101a2b;
+}
+.detail-pendaftar-note__heading {
+  display: block;
+  color: #e1e9f7;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+.detail-pendaftar-note__divider {
+  display: block;
+  height: 1px;
+  margin: 13px 0 14px;
+  background: #344760;
+}
+.detail-pendaftar-note textarea,
+.detail-pendaftar-note textarea:disabled {
+  display: block;
+  min-height: 76px;
+  width: 100%;
+  margin: 0;
+  padding: 13px 15px;
+  box-sizing: border-box;
+  border: 1px solid #263951;
+  border-radius: 9px;
+  background: #0a1323;
+  color: #bfcee4;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6;
+  resize: vertical;
+}
+.detail-pendaftar-note textarea:focus {
+  border-color: #6281a8;
+  outline: 2px solid rgba(98, 129, 168, .18);
+}
+.detail-pendaftar-note textarea:disabled {
+  color: #bfcee4;
+  opacity: 1;
+}
+@media (max-width: 600px) {
+  .detail-pendaftar-note { padding: 16px; }
+  .detail-pendaftar-note textarea,
+  .detail-pendaftar-note textarea:disabled { min-height: 68px; }
+}
